@@ -36,8 +36,13 @@ interface ProjectFormData {
   cdn?: string[];
   databases?: string[];
   webBasedApp?: string;
-  costPerMonth?: number | null;
+  costPerMonth?: string | null;
   notes?: string | null;
+}
+
+function normalizeCostForForm(v: unknown): string | null {
+  if (v === null || v === undefined || v === "") return null;
+  return String(v).trim() || null;
 }
 
 function normalizeWebBased(v: unknown): string {
@@ -78,6 +83,7 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
       webBasedApp: normalizeWebBased(
         defaultValues?.webBasedApp ?? (defaultValues as { isWebApp?: boolean } | undefined)?.isWebApp
       ),
+      costPerMonth: normalizeCostForForm(defaultValues?.costPerMonth),
     };
   });
 
@@ -184,14 +190,13 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
               />
             </div>
             <div className="form-group">
-              <label className="form-label">Cost / Month (USD)</label>
+              <label className="form-label">Cost / Month</label>
               <input
                 className="form-input"
-                type="number"
-                step="0.01"
+                type="text"
                 value={form.costPerMonth ?? ""}
-                onChange={(e) => set("costPerMonth", e.target.value ? parseFloat(e.target.value) : null)}
-                placeholder="45.00"
+                onChange={(e) => set("costPerMonth", e.target.value.trim() === "" ? null : e.target.value)}
+                placeholder="Mis. 45 USD, ~50/mo, gratis"
               />
             </div>
           </div>

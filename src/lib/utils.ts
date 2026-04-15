@@ -15,6 +15,18 @@ export function slugify(text: string) {
   return text.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
 }
 
+/** API / Prisma: cost field disimpan sebagai teks bebas */
+export function normalizeCostPerMonth(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "number" && !Number.isNaN(v)) return String(v);
+  if (typeof v === "string") {
+    const t = v.trim();
+    return t === "" ? null : t;
+  }
+  const s = String(v).trim();
+  return s === "" ? null : s;
+}
+
 export const STATUS_COLORS: Record<string, string> = {
   ACTIVE: "badge-green",
   MAINTENANCE: "badge-yellow",

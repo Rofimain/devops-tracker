@@ -41,7 +41,10 @@ export function ProjectDetailTabs({ project }: { project: any }) {
             </div>
             <div className="info-row"><span className="info-label">Platform</span><span className="info-value">{project.platform.map((t: string, i: number) => <span key={i} className="tag">{t}</span>)}</span></div>
             <div className="info-row"><span className="info-label">Repository</span><span className="info-value" style={{ color: "var(--accent)" }}>{project.repoUrl || "—"}</span></div>
-            <div className="info-row"><span className="info-label">Cost / Month</span><span className="info-value">{project.costPerMonth ? `$${Number(project.costPerMonth).toFixed(2)}` : "—"}</span></div>
+            <div className="info-row">
+              <span className="info-label">Cost / Month</span>
+              <span className="info-value">{project.costPerMonth?.trim() ? project.costPerMonth : "—"}</span>
+            </div>
             {project.notes && <div className="info-row"><span className="info-label">Notes</span><span className="info-value" style={{ whiteSpace: "pre-wrap", fontSize: 11 }}>{project.notes}</span></div>}
           </div>
           <div className="card">

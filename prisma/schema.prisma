@@ -74,7 +74,7 @@ model Project {
   cdn          String[]
   databases    String[]
   webBasedApp  String        @default("Yes")
-  costPerMonth Decimal?      @db.Decimal(10, 2)
+  costPerMonth String?
   notes        String?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt

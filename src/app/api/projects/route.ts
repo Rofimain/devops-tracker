@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { slugify } from "@/lib/utils";
+import { normalizeCostPerMonth, slugify } from "@/lib/utils";
 
 export async function GET() {
   const session = await auth();
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
         cdn: body.cdn || [],
         databases: body.databases || [],
         webBasedApp: typeof body.webBasedApp === "string" && body.webBasedApp.trim() ? body.webBasedApp.trim() : "Yes",
-        costPerMonth: body.costPerMonth || null,
+        costPerMonth: normalizeCostPerMonth(body.costPerMonth),
         notes: body.notes || null,
       },
     });

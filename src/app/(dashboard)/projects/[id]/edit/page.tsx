@@ -16,7 +16,7 @@ export default async function EditProjectPage({ params }: { params: { id: string
 
   const defaultValues = sanitize({
     ...project,
-    costPerMonth: project.costPerMonth ? Number(project.costPerMonth) : null,
+    costPerMonth: project.costPerMonth != null && String(project.costPerMonth).trim() !== "" ? String(project.costPerMonth) : undefined,
   });
 
   return (

@@ -136,7 +136,7 @@ export default async function ProjectsPage({
                         ) : <span style={{ color: "var(--text-muted)" }}>—</span>}
                       </td>
                       <td style={{ fontWeight: 600 }}>
-                        {p.costPerMonth ? `$${Number(p.costPerMonth).toFixed(0)}` : "—"}
+                        {p.costPerMonth?.trim() ? p.costPerMonth : "—"}
                       </td>
                       <td>
                         <Link href={`/projects/${p.slug}`} className="btn btn-sm">Detail</Link>

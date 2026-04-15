@@ -44,7 +44,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
               {project.url && <a href={project.url} target="_blank" rel="noopener noreferrer" className="tag" style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 3 }}>🌐 {project.url.replace(/^https?:\/\//, "")}<ExternalLink size={9} /></a>}
               {project.repoUrl && <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" className="tag" style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 3 }}>📦 {project.repoUrl.replace("https://github.com/", "")}<ExternalLink size={9} /></a>}
               {project.hosting[0] && <span className="tag">🖥 {project.hosting[0]}</span>}
-              {project.costPerMonth && <span className="tag">💰 ${Number(project.costPerMonth).toFixed(0)}/mo</span>}
+              {project.costPerMonth?.trim() && <span className="tag">💰 {project.costPerMonth}</span>}
               {project.management && <span className="tag">👤 {project.management}</span>}
             </div>
           </div>

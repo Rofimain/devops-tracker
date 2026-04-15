@@ -39,7 +39,7 @@ async function main() {
       cdn: ["Cloudflare"],
       databases: ["PostgreSQL 16", "Redis 7"],
       webBasedApp: "Yes",
-      costPerMonth: 45.0,
+      costPerMonth: "45",
     },
   });
 
