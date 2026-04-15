@@ -1,0 +1,44 @@
+version: "3.9"
+
+# Development only — untuk lokal di Mac
+# Jalankan: docker compose -f docker-compose.dev.yml up -d db
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: devops_db_local
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: devops_user
+      POSTGRES_PASSWORD: devops_pass
+      POSTGRES_DB: devops_tracker
+    ports:
+      - "5432:5432"   # expose ke host untuk Prisma Studio
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devops_user -d devops_tracker"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Prisma Studio — GUI untuk database
+  studio:
+    image: node:20-alpine
+    container_name: devops_prisma_studio
+    working_dir: /app
+    volumes:
+      - .:/app
+    command: sh -c "npm install && npx prisma studio --port 5555 --browser none"
+    ports:
+      - "5555:5555"
+    environment:
+      DATABASE_URL: postgresql://devops_user:devops_pass@db:5432/devops_tracker
+    depends_on:
+      db:
+        condition: service_healthy
+    profiles:
+      - studio   # jalankan dengan: docker compose --profile studio up
+
+volumes:
+  postgres_dev_data:

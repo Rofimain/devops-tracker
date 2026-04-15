@@ -1,0 +1,64 @@
+version: "3.9"
+
+services:
+  app:
+    image: ghcr.io/${GITHUB_USERNAME}/devops-tracker:latest
+    container_name: devops_app
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://devops_user:${DB_PASSWORD}@db:5432/devops_tracker
+      AUTH_SECRET: ${AUTH_SECRET}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      ALLOWED_EMAIL_DOMAIN: ${ALLOWED_EMAIL_DOMAIN}
+      SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app_net
+    # Port hanya expose ke dalam network, nginx yang handle dari luar
+
+  db:
+    image: postgres:16-alpine
+    container_name: devops_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: devops_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: devops_tracker
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devops_user -d devops_tracker"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app_net
+    # Sengaja tidak expose port ke host — akses hanya via container network
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: devops_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/www/certbot:/var/www/certbot:ro
+    depends_on:
+      - app
+    networks:
+      - app_net
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  app_net:
+    driver: bridge
