@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/topbar";
 import Link from "next/link";
-import { TOOL_CATEGORY_COLORS } from "@/lib/utils";
+import { TOOL_CATEGORY_COLORS, statusBadgeClass, statusLabel } from "@/lib/utils";
 import { ExternalLink, Edit, Trash2 } from "lucide-react";
 
 export default async function ToolDetailPage({ params }: { params: { id: string } }) {
@@ -91,9 +91,7 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
                         <td className="mono">{pt.version || tool.version || "—"}</td>
                         <td style={{ fontSize: 11, color: "var(--text-muted)", maxWidth: 240, whiteSpace: "normal" }}>{pt.notes || "—"}</td>
                         <td>
-                          <span className={`badge ${pt.project.status === "ACTIVE" ? "badge-green" : pt.project.status === "MAINTENANCE" ? "badge-yellow" : "badge-gray"}`}>
-                            {pt.project.status}
-                          </span>
+                          <span className={`badge ${statusBadgeClass(pt.project.status)}`}>{statusLabel(pt.project.status)}</span>
                         </td>
                         <td>
                           <Link href={`/projects/${pt.project.slug}`} className="btn btn-sm">Lihat Project</Link>

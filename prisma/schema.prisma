@@ -64,7 +64,7 @@ model Project {
   repoUrl      String?
   category     String?
   management   String?
-  status       ProjectStatus @default(ACTIVE)
+  status       String        @default("ACTIVE")
   platform     String[]
   environment  String?
   serverIp     String?
@@ -73,7 +73,7 @@ model Project {
   hosting      String[]
   cdn          String[]
   databases    String[]
-  isWebApp     Boolean       @default(true)
+  webBasedApp  String        @default("Yes")
   costPerMonth Decimal?      @db.Decimal(10, 2)
   notes        String?
   createdAt    DateTime      @default(now())
@@ -139,9 +139,3 @@ enum Role {
   MEMBER
 }
 
-enum ProjectStatus {
-  ACTIVE
-  MAINTENANCE
-  DEPRECATED
-  PLANNING
-}

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/topbar";
 import Link from "next/link";
-import { STATUS_COLORS, STATUS_LABELS } from "@/lib/utils";
+import { statusBadgeClass, statusLabel, webBasedBadgeClass } from "@/lib/utils";
 import { Plus, Search } from "lucide-react";
 import { ProjectFilters } from "./project-filters";
 
@@ -32,12 +32,18 @@ export default async function ProjectsPage({
   const countMap: Record<string, number> = { ALL: 0 };
   counts.forEach((c) => { countMap[c.status] = c._count.id; countMap.ALL += c._count.id; });
 
+  const presetOrder = ["ACTIVE", "MAINTENANCE", "DEPRECATED", "PLANNING"];
+  const distinctStatuses = counts.map((c) => c.status).filter(Boolean);
+  const orderedStatuses = [
+    ...presetOrder.filter((s) => distinctStatuses.includes(s)),
+    ...distinctStatuses.filter((s) => !presetOrder.includes(s)).sort((a, b) => a.localeCompare(b)),
+  ];
   const filters = [
     { label: `All (${countMap.ALL ?? 0})`, value: "ALL" },
-    { label: `Active (${countMap.ACTIVE ?? 0})`, value: "ACTIVE" },
-    { label: `Maintenance (${countMap.MAINTENANCE ?? 0})`, value: "MAINTENANCE" },
-    { label: `Deprecated (${countMap.DEPRECATED ?? 0})`, value: "DEPRECATED" },
-    { label: `Planning (${countMap.PLANNING ?? 0})`, value: "PLANNING" },
+    ...orderedStatuses.map((s) => ({
+      label: `${statusLabel(s)} (${countMap[s] ?? 0})`,
+      value: s,
+    })),
   ];
 
   return (
@@ -107,10 +113,12 @@ export default async function ProjectsPage({
                         {p.category ? <span className="badge badge-blue">{p.category}</span> : <span style={{ color: "var(--text-muted)" }}>—</span>}
                       </td>
                       <td style={{ fontSize: 12 }}>{p.management ?? "—"}</td>
-                      <td><span className={`badge ${STATUS_COLORS[p.status]}`}>{STATUS_LABELS[p.status]}</span></td>
+                      <td>
+                        <span className={`badge ${statusBadgeClass(p.status)}`}>{statusLabel(p.status)}</span>
+                      </td>
                       <td>{p.platform.map((t, j) => <span key={j} className="tag">{t}</span>)}</td>
                       <td className="col-infra">
-                        <span className={`badge ${p.isWebApp ? "badge-green" : "badge-gray"}`}>{p.isWebApp ? "Yes" : "No"}</span>
+                        <span className={`badge ${webBasedBadgeClass(p.webBasedApp)}`}>{p.webBasedApp}</span>
                       </td>
                       <td className="col-infra mono">{p.targetGroup || "—"}</td>
                       <td className="col-infra mono">{p.loadBalancer || "—"}</td>

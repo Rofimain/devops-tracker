@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
         hosting: body.hosting || [],
         cdn: body.cdn || [],
         databases: body.databases || [],
-        isWebApp: body.isWebApp ?? true,
+        webBasedApp: typeof body.webBasedApp === "string" && body.webBasedApp.trim() ? body.webBasedApp.trim() : "Yes",
         costPerMonth: body.costPerMonth || null,
         notes: body.notes || null,
       },

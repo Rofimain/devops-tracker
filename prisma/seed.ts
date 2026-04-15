@@ -1,4 +1,4 @@
-import { PrismaClient, Role, ProjectStatus } from "@prisma/client";
+import { PrismaClient, Role } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -29,7 +29,7 @@ async function main() {
       repoUrl: "https://github.com/company/portal",
       category: "Internal",
       management: "DevOps Team",
-      status: ProjectStatus.ACTIVE,
+      status: "ACTIVE",
       platform: ["Next.js 14", "Node 20"],
       environment: "production",
       serverIp: "10.0.1.45",
@@ -38,7 +38,7 @@ async function main() {
       hosting: ["AWS EC2 t3.medium"],
       cdn: ["Cloudflare"],
       databases: ["PostgreSQL 16", "Redis 7"],
-      isWebApp: true,
+      webBasedApp: "Yes",
       costPerMonth: 45.0,
     },
   });

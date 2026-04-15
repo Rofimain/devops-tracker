@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/topbar";
 import Link from "next/link";
-import { STATUS_COLORS, STATUS_LABELS, TOOL_CATEGORY_COLORS, timeAgo } from "@/lib/utils";
+import { statusBadgeClass, statusLabel, TOOL_CATEGORY_COLORS, timeAgo } from "@/lib/utils";
 import { ProjectDetailTabs } from "./project-detail-tabs";
 import { Edit, Plus, ExternalLink } from "lucide-react";
 
@@ -26,7 +26,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         breadcrumb="Projects"
         action={
           <div style={{ display: "flex", gap: 8 }}>
-            <span className={`badge ${STATUS_COLORS[project.status]}`}>{STATUS_LABELS[project.status]}</span>
+            <span className={`badge ${statusBadgeClass(project.status)}`}>{statusLabel(project.status)}</span>
             <Link href={`/projects/${project.slug}/edit`} className="btn btn-sm"><Edit size={12} /> Edit</Link>
             <Link href={`/projects/${project.slug}/tools/add`} className="btn btn-primary btn-sm"><Plus size={12} /> Add Tool</Link>
           </div>

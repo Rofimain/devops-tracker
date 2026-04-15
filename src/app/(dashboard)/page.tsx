@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/topbar";
 import Link from "next/link";
-import { timeAgo, STATUS_COLORS, STATUS_LABELS } from "@/lib/utils";
+import { timeAgo, statusBadgeClass, statusLabel } from "@/lib/utils";
 import { Plus } from "lucide-react";
 
 export default async function DashboardPage() {
@@ -131,7 +131,9 @@ export default async function DashboardPage() {
                         </td>
                         <td>{p.platform.slice(0, 2).map((t, i) => <span key={i} className="tag">{t}</span>)}</td>
                         <td>{p.hosting.slice(0, 1).map((h, i) => <span key={i} className="tag">{h}</span>)}</td>
-                        <td><span className={`badge ${STATUS_COLORS[p.status]}`}>{STATUS_LABELS[p.status]}</span></td>
+                        <td>
+                          <span className={`badge ${statusBadgeClass(p.status)}`}>{statusLabel(p.status)}</span>
+                        </td>
                       </tr>
                     ))
                   )}

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { TOOL_CATEGORY_COLORS, timeAgo } from "@/lib/utils";
+import { TOOL_CATEGORY_COLORS, timeAgo, statusBadgeClass, statusLabel, webBasedBadgeClass } from "@/lib/utils";
 import { FileText, Plus, ExternalLink } from "lucide-react";
 
 export function ProjectDetailTabs({ project }: { project: any }) {
@@ -33,7 +33,12 @@ export function ProjectDetailTabs({ project }: { project: any }) {
             <div className="info-row"><span className="info-label">URL</span><span className="info-value" style={{ color: "var(--accent)" }}>{project.url || "—"}</span></div>
             <div className="info-row"><span className="info-label">Category</span><span className="info-value">{project.category ? <span className="badge badge-blue">{project.category}</span> : "—"}</span></div>
             <div className="info-row"><span className="info-label">Management</span><span className="info-value">{project.management || "—"}</span></div>
-            <div className="info-row"><span className="info-label">Status</span><span className="info-value"><span className={`badge badge-${project.status === "ACTIVE" ? "green" : project.status === "MAINTENANCE" ? "yellow" : "red"}`}>{project.status}</span></span></div>
+            <div className="info-row">
+              <span className="info-label">Status</span>
+              <span className="info-value">
+                <span className={`badge ${statusBadgeClass(project.status)}`}>{statusLabel(project.status)}</span>
+              </span>
+            </div>
             <div className="info-row"><span className="info-label">Platform</span><span className="info-value">{project.platform.map((t: string, i: number) => <span key={i} className="tag">{t}</span>)}</span></div>
             <div className="info-row"><span className="info-label">Repository</span><span className="info-value" style={{ color: "var(--accent)" }}>{project.repoUrl || "—"}</span></div>
             <div className="info-row"><span className="info-label">Cost / Month</span><span className="info-value">{project.costPerMonth ? `$${Number(project.costPerMonth).toFixed(2)}` : "—"}</span></div>
@@ -41,7 +46,12 @@ export function ProjectDetailTabs({ project }: { project: any }) {
           </div>
           <div className="card">
             <div className="card-header"><span className="card-title">Infrastruktur Summary</span></div>
-            <div className="info-row"><span className="info-label">Web App</span><span className="info-value"><span className={`badge ${project.isWebApp ? "badge-green" : "badge-gray"}`}>{project.isWebApp ? "Yes" : "No"}</span></span></div>
+            <div className="info-row">
+              <span className="info-label">Web App</span>
+              <span className="info-value">
+                <span className={`badge ${webBasedBadgeClass(project.webBasedApp)}`}>{project.webBasedApp}</span>
+              </span>
+            </div>
             <div className="info-row"><span className="info-label">Target Group</span><span className="info-value mono">{project.targetGroup || "—"}</span></div>
             <div className="info-row"><span className="info-label">Load Balancer</span><span className="info-value mono">{project.loadBalancer || "—"}</span></div>
             <div className="info-row"><span className="info-label">Server IP</span><span className="info-value mono">{project.serverIp || "—"}</span></div>

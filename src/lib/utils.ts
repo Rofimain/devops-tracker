@@ -29,6 +29,21 @@ export const STATUS_LABELS: Record<string, string> = {
   PLANNING: "Planning",
 };
 
+export function statusLabel(status: string) {
+  return STATUS_LABELS[status] ?? status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export function statusBadgeClass(status: string) {
+  return STATUS_COLORS[status] ?? "badge-gray";
+}
+
+export function webBasedBadgeClass(value: string) {
+  const v = value.trim().toLowerCase();
+  if (v === "yes" || v === "y") return "badge-green";
+  if (v === "no" || v === "n") return "badge-gray";
+  return "badge-blue";
+}
+
 export const ROLE_COLORS: Record<string, string> = {
   SUPER_ADMIN: "badge-accent",
   ADMIN: "badge-purple",

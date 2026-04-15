@@ -3,9 +3,19 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { slugify } from "@/lib/utils";
+import { CreatableSelect } from "@/components/creatable-select";
 
-const STATUSES = ["ACTIVE", "MAINTENANCE", "DEPRECATED", "PLANNING"];
-const CATEGORIES = ["Internal", "API", "CMS", "Data", "Commerce", "Auth", "Infra", "Other"];
+const LS = {
+  categories: "devops-tracker:project:categories",
+  statuses: "devops-tracker:project:statuses",
+  environments: "devops-tracker:project:environments",
+  webBased: "devops-tracker:project:web-based",
+} as const;
+
+const PRESET_STATUSES = ["ACTIVE", "MAINTENANCE", "DEPRECATED", "PLANNING"];
+const PRESET_CATEGORIES = ["Internal", "API", "CMS", "Data", "Commerce", "Auth", "Infra", "Other"];
+const PRESET_ENVIRONMENTS = ["production", "staging", "development"];
+const PRESET_WEB_BASED = ["Yes", "No"];
 
 interface ProjectFormData {
   id?: string;
@@ -25,9 +35,15 @@ interface ProjectFormData {
   hosting?: string[];
   cdn?: string[];
   databases?: string[];
-  isWebApp?: boolean;
+  webBasedApp?: string;
   costPerMonth?: number | null;
   notes?: string | null;
+}
+
+function normalizeWebBased(v: unknown): string {
+  if (typeof v === "boolean") return v ? "Yes" : "No";
+  if (typeof v === "string" && v.trim()) return v.trim();
+  return "Yes";
 }
 
 export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; defaultValues?: ProjectFormData }) {
@@ -35,12 +51,34 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const [form, setForm] = useState<ProjectFormData>({
-    name: "", description: "", url: "", repoUrl: "", category: "", management: "",
-    status: "ACTIVE", platform: [], environment: "production", serverIp: "",
-    targetGroup: "", loadBalancer: "", hosting: [], cdn: [], databases: [],
-    isWebApp: true, costPerMonth: null, notes: "",
-    ...defaultValues,
+  const [form, setForm] = useState<ProjectFormData>(() => {
+    const base: ProjectFormData = {
+      name: "",
+      description: "",
+      url: "",
+      repoUrl: "",
+      category: "",
+      management: "",
+      status: "ACTIVE",
+      platform: [],
+      environment: "production",
+      serverIp: "",
+      targetGroup: "",
+      loadBalancer: "",
+      hosting: [],
+      cdn: [],
+      databases: [],
+      webBasedApp: "Yes",
+      costPerMonth: null,
+      notes: "",
+    };
+    return {
+      ...base,
+      ...defaultValues,
+      webBasedApp: normalizeWebBased(
+        defaultValues?.webBasedApp ?? (defaultValues as { isWebApp?: boolean } | undefined)?.isWebApp
+      ),
+    };
   });
 
   const set = (k: keyof ProjectFormData, v: any) => setForm((f) => ({ ...f, [k]: v }));
@@ -61,46 +99,69 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) { const d = await res.json(); setError(d.error ?? "Terjadi kesalahan"); return; }
+      if (!res.ok) {
+        const d = await res.json();
+        setError(d.error ?? "Terjadi kesalahan");
+        return;
+      }
       const data = await res.json();
       router.push(`/projects/${data.slug}`);
       router.refresh();
-    } catch { setError("Terjadi kesalahan"); } finally { setLoading(false); }
+    } catch {
+      setError("Terjadi kesalahan");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <form onSubmit={handleSubmit}>
-      {error && <div className="alert-warning" style={{ background: "var(--red-bg)", borderColor: "var(--red)", color: "var(--red-text)" }}>{error}</div>}
+      {error && (
+        <div className="alert-warning" style={{ background: "var(--red-bg)", borderColor: "var(--red)", color: "var(--red-text)" }}>
+          {error}
+        </div>
+      )}
 
       <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-header"><span className="card-title">Informasi Umum</span></div>
+        <div className="card-header">
+          <span className="card-title">Informasi Umum</span>
+        </div>
         <div className="card-body">
           <div className="grid-2">
             <div className="form-group">
               <label className="form-label">Site Name *</label>
-              <input className="form-input" value={form.name ?? ""} onChange={(e) => set("name", e.target.value)} required placeholder="Portal Internal" />
+              <input
+                className="form-input"
+                value={form.name ?? ""}
+                onChange={(e) => set("name", e.target.value)}
+                required
+                placeholder="Portal Internal"
+              />
             </div>
             <div className="form-group">
               <label className="form-label">URL</label>
               <input className="form-input" value={form.url ?? ""} onChange={(e) => set("url", e.target.value)} placeholder="https://portal.company.com" />
             </div>
-            <div className="form-group">
-              <label className="form-label">Category</label>
-              <select className="form-select" value={form.category ?? ""} onChange={(e) => set("category", e.target.value)}>
-                <option value="">— Pilih kategori —</option>
-                {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
+            <CreatableSelect
+              label="Category"
+              value={form.category ?? ""}
+              onChange={(v) => set("category", v)}
+              presetOptions={PRESET_CATEGORIES}
+              storageKey={LS.categories}
+              allowEmpty
+              emptyLabel="— Pilih kategori —"
+            />
             <div className="form-group">
               <label className="form-label">Management / Team</label>
               <input className="form-input" value={form.management ?? ""} onChange={(e) => set("management", e.target.value)} placeholder="DevOps Team" />
             </div>
-            <div className="form-group">
-              <label className="form-label">Status</label>
-              <select className="form-select" value={form.status} onChange={(e) => set("status", e.target.value)}>
-                {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
+            <CreatableSelect
+              label="Status"
+              value={form.status ?? "ACTIVE"}
+              onChange={(v) => set("status", v)}
+              presetOptions={PRESET_STATUSES}
+              storageKey={LS.statuses}
+            />
             <div className="form-group">
               <label className="form-label">Repository URL</label>
               <input className="form-input" value={form.repoUrl ?? ""} onChange={(e) => set("repoUrl", e.target.value)} placeholder="https://github.com/company/repo" />
@@ -112,34 +173,51 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
           </div>
           <div className="grid-2">
             <div className="form-group">
-              <label className="form-label">Platform / Tech Stack <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(pisah dengan koma)</span></label>
-              <input className="form-input" defaultValue={(form.platform ?? []).join(", ")} onChange={(e) => handleArrayInput("platform", e.target.value)} placeholder="Next.js 14, Node 20, TypeScript" />
+              <label className="form-label">
+                Platform / Tech Stack <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(pisah dengan koma)</span>
+              </label>
+              <input
+                className="form-input"
+                defaultValue={(form.platform ?? []).join(", ")}
+                onChange={(e) => handleArrayInput("platform", e.target.value)}
+                placeholder="Next.js 14, Node 20, TypeScript"
+              />
             </div>
             <div className="form-group">
               <label className="form-label">Cost / Month (USD)</label>
-              <input className="form-input" type="number" step="0.01" value={form.costPerMonth ?? ""} onChange={(e) => set("costPerMonth", e.target.value ? parseFloat(e.target.value) : null)} placeholder="45.00" />
+              <input
+                className="form-input"
+                type="number"
+                step="0.01"
+                value={form.costPerMonth ?? ""}
+                onChange={(e) => set("costPerMonth", e.target.value ? parseFloat(e.target.value) : null)}
+                placeholder="45.00"
+              />
             </div>
           </div>
         </div>
       </div>
 
       <div className="card" style={{ marginBottom: 14 }}>
-        <div className="card-header"><span className="card-title">Infrastruktur</span></div>
+        <div className="card-header">
+          <span className="card-title">Infrastruktur</span>
+        </div>
         <div className="card-body">
           <div className="grid-2">
-            <div className="form-group">
-              <label className="form-label">Web-based Application?</label>
-              <select className="form-select" value={form.isWebApp ? "yes" : "no"} onChange={(e) => set("isWebApp", e.target.value === "yes")}>
-                <option value="yes">Yes</option>
-                <option value="no">No</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Environment</label>
-              <select className="form-select" value={form.environment ?? "production"} onChange={(e) => set("environment", e.target.value)}>
-                {["production", "staging", "development"].map((e) => <option key={e} value={e}>{e}</option>)}
-              </select>
-            </div>
+            <CreatableSelect
+              label="Web-based Application?"
+              value={form.webBasedApp ?? "Yes"}
+              onChange={(v) => set("webBasedApp", v)}
+              presetOptions={PRESET_WEB_BASED}
+              storageKey={LS.webBased}
+            />
+            <CreatableSelect
+              label="Environment"
+              value={form.environment ?? "production"}
+              onChange={(v) => set("environment", v)}
+              presetOptions={PRESET_ENVIRONMENTS}
+              storageKey={LS.environments}
+            />
             <div className="form-group">
               <label className="form-label">Target Group</label>
               <input className="form-input mono" value={form.targetGroup ?? ""} onChange={(e) => set("targetGroup", e.target.value)} placeholder="portal-tg-prod" />
@@ -153,16 +231,27 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
               <input className="form-input mono" value={form.serverIp ?? ""} onChange={(e) => set("serverIp", e.target.value)} placeholder="10.0.1.45" />
             </div>
             <div className="form-group">
-              <label className="form-label">Hosting <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(pisah koma)</span></label>
+              <label className="form-label">
+                Hosting <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(pisah koma)</span>
+              </label>
               <input className="form-input" defaultValue={(form.hosting ?? []).join(", ")} onChange={(e) => handleArrayInput("hosting", e.target.value)} placeholder="AWS EC2 t3.medium" />
             </div>
             <div className="form-group">
-              <label className="form-label">CDN / Proxy <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(pisah koma)</span></label>
+              <label className="form-label">
+                CDN / Proxy <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(pisah koma)</span>
+              </label>
               <input className="form-input" defaultValue={(form.cdn ?? []).join(", ")} onChange={(e) => handleArrayInput("cdn", e.target.value)} placeholder="Cloudflare" />
             </div>
             <div className="form-group">
-              <label className="form-label">Database <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(pisah koma)</span></label>
-              <input className="form-input" defaultValue={(form.databases ?? []).join(", ")} onChange={(e) => handleArrayInput("databases", e.target.value)} placeholder="PostgreSQL 16, Redis 7" />
+              <label className="form-label">
+                Database <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(pisah koma)</span>
+              </label>
+              <input
+                className="form-input"
+                defaultValue={(form.databases ?? []).join(", ")}
+                onChange={(e) => handleArrayInput("databases", e.target.value)}
+                placeholder="PostgreSQL 16, Redis 7"
+              />
             </div>
           </div>
           <div className="form-group">
@@ -173,7 +262,9 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
       </div>
 
       <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-        <button type="button" className="btn" onClick={() => router.back()}>Batal</button>
+        <button type="button" className="btn" onClick={() => router.back()}>
+          Batal
+        </button>
         <button type="submit" className="btn btn-primary" disabled={loading}>
           {loading ? "Menyimpan..." : mode === "create" ? "Buat Project" : "Simpan Perubahan"}
         </button>
