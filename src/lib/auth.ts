@@ -3,13 +3,16 @@ import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 import { Role } from "@prisma/client";
+import { authConfig } from "@/auth.config";
 
 const ALLOWED_DOMAIN = process.env.ALLOWED_EMAIL_DOMAIN ?? "";
 const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL ?? "";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  trustHost: true,
+  ...authConfig,
   adapter: PrismaAdapter(prisma),
+  trustHost: true,
+  session: { strategy: "database" },
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -22,7 +25,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (ALLOWED_DOMAIN && !email.endsWith(`@${ALLOWED_DOMAIN}`)) {
         return false;
       }
-      // Auto-promote super admin
       if (email === SUPER_ADMIN_EMAIL) {
         await prisma.user.updateMany({
           where: { email, role: { not: Role.SUPER_ADMIN } },
