@@ -83,6 +83,8 @@ jobs:
               -e DATABASE_URL="postgresql://devops_user:${DB_PASS}@db:5432/devops_tracker" \
               ${IMAGE}:latest \
               sh -c "npx prisma@5 migrate deploy"
+            # Tarik image service app dari registry + buat ulang container (restart implisit tiap deploy)
+            docker compose pull app
             docker compose up -d --no-deps --force-recreate app
             docker image prune -f
             echo "Deploy selesai!"
