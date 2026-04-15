@@ -9,7 +9,6 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
-  # ─── JOB 1: Build & Push Docker Image ────────────────────────
   build:
     name: Build Docker Image
     runs-on: ubuntu-latest
@@ -23,12 +22,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Paksa lowercase image name
+      - name: Lowercase image name
         id: lower
         run: |
           IMAGE=$(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           echo "image=${IMAGE}" >> $GITHUB_OUTPUT
-          echo "Akan build image: ${IMAGE}"
 
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -52,14 +50,13 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ─── JOB 2: Deploy to Server ─────────────────────────────────
   deploy:
     name: Deploy to Server
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Paksa lowercase image name
+      - name: Lowercase image name
         id: lower
         run: |
           IMAGE=$(echo "ghcr.io/${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
@@ -73,33 +70,19 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: 2222
           command_timeout: 15m
-
-           script: |
+          script: |
             set -e
             cd /opt/devops-tracker
-
-            IMAGE="ghcr.io/rofimain/devops-tracker"
-            echo "🖼️  Image: ${IMAGE}:latest"
-
-            echo "📦 Login ke GHCR..."
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
-              -u ${{ github.actor }} --password-stdin
-
-            echo "📦 Pulling latest image..."
+            IMAGE="${{ steps.lower.outputs.image }}"
+            echo "Image: ${IMAGE}:latest"
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker pull ${IMAGE}:latest
-
-            echo "🗄️  Running database migrations (prisma v5)..."
             DB_PASS=$(grep '^DB_PASSWORD' /opt/devops-tracker/.env | cut -d= -f2 | tr -d '"' | tr -d "'")
             docker run --rm \
               --network devops-tracker_app_net \
               -e DATABASE_URL="postgresql://devops_user:${DB_PASS}@db:5432/devops_tracker" \
               ${IMAGE}:latest \
               sh -c "npx prisma@5 migrate deploy"
-
-            echo "🔄 Restarting app container..."
             docker compose up -d --no-deps --force-recreate app
-
-            echo "🧹 Cleaning up old images..."
             docker image prune -f
-
-            echo "✅ Deploy selesai!"
+            echo "Deploy selesai!"
