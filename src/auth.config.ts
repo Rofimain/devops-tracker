@@ -4,6 +4,7 @@ import Google from "next-auth/providers/google";
 // Config ini HANYA untuk middleware (Edge Runtime)
 // Tidak boleh ada Prisma/Node.js-only imports di sini
 export const authConfig: NextAuthConfig = {
+  trustHost: true, 
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
