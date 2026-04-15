@@ -10,24 +10,24 @@ const CATEGORIES = ["Internal", "API", "CMS", "Data", "Commerce", "Auth", "Infra
 interface ProjectFormData {
   id?: string;
   slug?: string;
-  name?: string;
-  description?: string;
-  url?: string;
-  repoUrl?: string;
-  category?: string;
-  management?: string;
+  name?: string | null;
+  description?: string | null;
+  url?: string | null;
+  repoUrl?: string | null;
+  category?: string | null;
+  management?: string | null;
   status?: string;
   platform?: string[];
-  environment?: string;
-  serverIp?: string;
-  targetGroup?: string;
-  loadBalancer?: string;
+  environment?: string | null;
+  serverIp?: string | null;
+  targetGroup?: string | null;
+  loadBalancer?: string | null;
   hosting?: string[];
   cdn?: string[];
   databases?: string[];
   isWebApp?: boolean;
   costPerMonth?: number | null;
-  notes?: string;
+  notes?: string | null;
 }
 
 export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; defaultValues?: ProjectFormData }) {
@@ -72,29 +72,28 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
     <form onSubmit={handleSubmit}>
       {error && <div className="alert-warning" style={{ background: "var(--red-bg)", borderColor: "var(--red)", color: "var(--red-text)" }}>{error}</div>}
 
-      {/* General Info */}
       <div className="card" style={{ marginBottom: 14 }}>
         <div className="card-header"><span className="card-title">Informasi Umum</span></div>
         <div className="card-body">
           <div className="grid-2">
             <div className="form-group">
               <label className="form-label">Site Name *</label>
-              <input className="form-input" value={form.name} onChange={(e) => set("name", e.target.value)} required placeholder="Portal Internal" />
+              <input className="form-input" value={form.name ?? ""} onChange={(e) => set("name", e.target.value)} required placeholder="Portal Internal" />
             </div>
             <div className="form-group">
               <label className="form-label">URL</label>
-              <input className="form-input" value={form.url} onChange={(e) => set("url", e.target.value)} placeholder="https://portal.company.com" />
+              <input className="form-input" value={form.url ?? ""} onChange={(e) => set("url", e.target.value)} placeholder="https://portal.company.com" />
             </div>
             <div className="form-group">
               <label className="form-label">Category</label>
-              <select className="form-select" value={form.category} onChange={(e) => set("category", e.target.value)}>
+              <select className="form-select" value={form.category ?? ""} onChange={(e) => set("category", e.target.value)}>
                 <option value="">— Pilih kategori —</option>
                 {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div className="form-group">
               <label className="form-label">Management / Team</label>
-              <input className="form-input" value={form.management} onChange={(e) => set("management", e.target.value)} placeholder="DevOps Team" />
+              <input className="form-input" value={form.management ?? ""} onChange={(e) => set("management", e.target.value)} placeholder="DevOps Team" />
             </div>
             <div className="form-group">
               <label className="form-label">Status</label>
@@ -104,12 +103,12 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
             </div>
             <div className="form-group">
               <label className="form-label">Repository URL</label>
-              <input className="form-input" value={form.repoUrl} onChange={(e) => set("repoUrl", e.target.value)} placeholder="https://github.com/company/repo" />
+              <input className="form-input" value={form.repoUrl ?? ""} onChange={(e) => set("repoUrl", e.target.value)} placeholder="https://github.com/company/repo" />
             </div>
           </div>
           <div className="form-group">
             <label className="form-label">Description</label>
-            <textarea className="form-textarea" value={form.description} onChange={(e) => set("description", e.target.value)} placeholder="Deskripsi singkat tentang project ini..." />
+            <textarea className="form-textarea" value={form.description ?? ""} onChange={(e) => set("description", e.target.value)} placeholder="Deskripsi singkat tentang project ini..." />
           </div>
           <div className="grid-2">
             <div className="form-group">
@@ -124,7 +123,6 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
         </div>
       </div>
 
-      {/* Infrastructure */}
       <div className="card" style={{ marginBottom: 14 }}>
         <div className="card-header"><span className="card-title">Infrastruktur</span></div>
         <div className="card-body">
@@ -138,29 +136,29 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
             </div>
             <div className="form-group">
               <label className="form-label">Environment</label>
-              <select className="form-select" value={form.environment} onChange={(e) => set("environment", e.target.value)}>
+              <select className="form-select" value={form.environment ?? "production"} onChange={(e) => set("environment", e.target.value)}>
                 {["production", "staging", "development"].map((e) => <option key={e} value={e}>{e}</option>)}
               </select>
             </div>
             <div className="form-group">
               <label className="form-label">Target Group</label>
-              <input className="form-input mono" value={form.targetGroup} onChange={(e) => set("targetGroup", e.target.value)} placeholder="portal-tg-prod" />
+              <input className="form-input mono" value={form.targetGroup ?? ""} onChange={(e) => set("targetGroup", e.target.value)} placeholder="portal-tg-prod" />
             </div>
             <div className="form-group">
               <label className="form-label">Load Balancer</label>
-              <input className="form-input mono" value={form.loadBalancer} onChange={(e) => set("loadBalancer", e.target.value)} placeholder="ALB-portal-prod" />
+              <input className="form-input mono" value={form.loadBalancer ?? ""} onChange={(e) => set("loadBalancer", e.target.value)} placeholder="ALB-portal-prod" />
             </div>
             <div className="form-group">
               <label className="form-label">Server IP</label>
-              <input className="form-input mono" value={form.serverIp} onChange={(e) => set("serverIp", e.target.value)} placeholder="10.0.1.45" />
+              <input className="form-input mono" value={form.serverIp ?? ""} onChange={(e) => set("serverIp", e.target.value)} placeholder="10.0.1.45" />
             </div>
             <div className="form-group">
               <label className="form-label">Hosting <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(pisah koma)</span></label>
-              <input className="form-input" defaultValue={(form.hosting ?? []).join(", ")} onChange={(e) => handleArrayInput("hosting", e.target.value)} placeholder="AWS EC2 t3.medium, GCP" />
+              <input className="form-input" defaultValue={(form.hosting ?? []).join(", ")} onChange={(e) => handleArrayInput("hosting", e.target.value)} placeholder="AWS EC2 t3.medium" />
             </div>
             <div className="form-group">
               <label className="form-label">CDN / Proxy <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(pisah koma)</span></label>
-              <input className="form-input" defaultValue={(form.cdn ?? []).join(", ")} onChange={(e) => handleArrayInput("cdn", e.target.value)} placeholder="Cloudflare, AWS CloudFront" />
+              <input className="form-input" defaultValue={(form.cdn ?? []).join(", ")} onChange={(e) => handleArrayInput("cdn", e.target.value)} placeholder="Cloudflare" />
             </div>
             <div className="form-group">
               <label className="form-label">Database <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(pisah koma)</span></label>
@@ -169,12 +167,11 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
           </div>
           <div className="form-group">
             <label className="form-label">Notes / Catatan Tambahan</label>
-            <textarea className="form-textarea" value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Catatan konfigurasi, kredensial path, dll..." />
+            <textarea className="form-textarea" value={form.notes ?? ""} onChange={(e) => set("notes", e.target.value)} placeholder="Catatan konfigurasi..." />
           </div>
         </div>
       </div>
 
-      {/* Submit */}
       <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
         <button type="button" className="btn" onClick={() => router.back()}>Batal</button>
         <button type="submit" className="btn btn-primary" disabled={loading}>
