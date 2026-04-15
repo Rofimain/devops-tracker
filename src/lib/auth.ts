@@ -8,6 +8,7 @@ const ALLOWED_DOMAIN = process.env.ALLOWED_EMAIL_DOMAIN ?? "";
 const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL ?? "";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  trustHost: true,
   adapter: PrismaAdapter(prisma),
   providers: [
     Google({
