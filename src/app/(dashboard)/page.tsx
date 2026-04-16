@@ -38,8 +38,8 @@ export default async function DashboardPage() {
   // Compute hosting distribution (per environment row)
   const hostingMap: Record<string, number> = {};
   infraAgg.forEach((p) =>
-    p.infras.forEach((inf) =>
-      inf.hosting.forEach((h) => {
+    (p.infras ?? []).forEach((inf) =>
+      (inf.hosting ?? []).forEach((h) => {
         const key = h.toLowerCase().includes("aws") ? "AWS" : h.toLowerCase().includes("gcp") ? "GCP" : h.toLowerCase().includes("azure") ? "Azure" : "VPS/Other";
         hostingMap[key] = (hostingMap[key] ?? 0) + 1;
       })
@@ -48,8 +48,8 @@ export default async function DashboardPage() {
 
   const dbMap: Record<string, number> = {};
   infraAgg.forEach((p) =>
-    p.infras.forEach((inf) =>
-      inf.databases.forEach((d) => {
+    (p.infras ?? []).forEach((inf) =>
+      (inf.databases ?? []).forEach((d) => {
         const key = d.toLowerCase().includes("postgres")
           ? "PostgreSQL"
           : d.toLowerCase().includes("mysql")
@@ -149,9 +149,9 @@ export default async function DashboardPage() {
                           <Link href={`/projects/${p.slug}`} style={{ fontWeight: 600, color: "var(--text-primary)", textDecoration: "none" }}>{p.name}</Link>
                           {p.url && <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{p.url.replace("https://", "").replace("http://", "")}</div>}
                         </td>
-                        <td>{p.platform.slice(0, 2).map((t, i) => <span key={i} className="tag">{t}</span>)}</td>
+                        <td>{(p.platform ?? []).slice(0, 2).map((t, i) => <span key={i} className="tag">{t}</span>)}</td>
                         <td>
-                          {(p.infras[0]?.hosting ?? []).slice(0, 1).map((h, i) => (
+                          {((p.infras ?? [])[0]?.hosting ?? []).slice(0, 1).map((h, i) => (
                             <span key={i} className="tag">{h}</span>
                           ))}
                         </td>
@@ -177,7 +177,7 @@ export default async function DashboardPage() {
                   <div key={a.id} className="activity-item">
                     <div className="activity-dot" style={{ background: activityColors[a.action] ?? "var(--accent)" }} />
                     <div>
-                      <div style={{ fontSize: 12, color: "var(--text-primary)" }}>{a.details}</div>
+                      <div style={{ fontSize: 12, color: "var(--text-primary)" }}>{a.details ?? a.action}</div>
                       <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 2 }}>
                         {a.user?.name ?? "System"} · {timeAgo(a.createdAt)}
                       </div>
@@ -200,7 +200,8 @@ export default async function DashboardPage() {
                   <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Belum ada data.</div>
                 ) : (
                   Object.entries(hostingMap).map(([k, v]) => {
-                    const max = Math.max(...Object.values(hostingMap));
+                    const hostingVals = Object.values(hostingMap);
+                    const max = Math.max(1, ...hostingVals);
                     return (
                       <div key={k} style={{ marginBottom: 8 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-secondary)", marginBottom: 3 }}>
@@ -220,7 +221,8 @@ export default async function DashboardPage() {
                   <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Belum ada data.</div>
                 ) : (
                   Object.entries(dbMap).map(([k, v]) => {
-                    const max = Math.max(...Object.values(dbMap));
+                    const dbVals = Object.values(dbMap);
+                    const max = Math.max(1, ...dbVals);
                     const colors = ["var(--accent)", "var(--green)", "var(--yellow)", "var(--purple)"];
                     const idx = Object.keys(dbMap).indexOf(k);
                     return (

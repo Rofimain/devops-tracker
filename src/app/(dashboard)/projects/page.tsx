@@ -117,34 +117,34 @@ export default async function ProjectsPage({
                       <td>
                         <span className={`badge ${statusBadgeClass(p.status)}`}>{statusLabel(p.status)}</span>
                       </td>
-                      <td>{p.platform.map((t, j) => <span key={j} className="tag">{t}</span>)}</td>
+                      <td>{(p.platform ?? []).map((t, j) => <span key={j} className="tag">{t}</span>)}</td>
                       <td className="col-infra">
                         <span className={`badge ${webBasedBadgeClass(p.webBasedApp)}`}>{p.webBasedApp}</span>
                       </td>
                       <td className="col-infra">
-                        {p.infras.length === 0 ? (
+                        {(p.infras ?? []).length === 0 ? (
                           "—"
                         ) : (
-                          p.infras.map((inf) => (
+                          (p.infras ?? []).map((inf) => (
                             <span key={inf.id} className="badge badge-blue" style={{ marginRight: 4, marginBottom: 4, fontSize: 10, textTransform: "capitalize" }}>
                               {inf.envName}
                             </span>
                           ))
                         )}
                       </td>
-                      <td className="col-infra mono">{p.infras[0]?.targetGroup || "—"}</td>
-                      <td className="col-infra mono">{p.infras[0]?.loadBalancer || "—"}</td>
+                      <td className="col-infra mono">{(p.infras ?? [])[0]?.targetGroup || "—"}</td>
+                      <td className="col-infra mono">{(p.infras ?? [])[0]?.loadBalancer || "—"}</td>
                       <td className="col-infra">
-                        {p.infras.length === 0
+                        {(p.infras ?? []).length === 0
                           ? "—"
-                          : [...(p.infras[0]?.hosting ?? []), ...(p.infras[0]?.cdn ?? [])].map((h, j) => <span key={j} className="tag">{h}</span>)}
+                          : [...((p.infras ?? [])[0]?.hosting ?? []), ...((p.infras ?? [])[0]?.cdn ?? [])].map((h, j) => <span key={j} className="tag">{h}</span>)}
                       </td>
                       <td className="col-infra">
-                        {p.infras.length === 0
+                        {(p.infras ?? []).length === 0
                           ? "—"
-                          : (p.infras[0]?.databases ?? []).length === 0
+                          : ((p.infras ?? [])[0]?.databases ?? []).length === 0
                             ? "—"
-                            : (p.infras[0]?.databases ?? []).map((d, j) => <span key={j} className="tag">{d}</span>)}
+                            : ((p.infras ?? [])[0]?.databases ?? []).map((d, j) => <span key={j} className="tag">{d}</span>)}
                       </td>
                       <td>
                         {p.repoUrl ? (

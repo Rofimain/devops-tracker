@@ -39,7 +39,7 @@ export function ProjectDetailTabs({ project }: { project: any }) {
                 <span className={`badge ${statusBadgeClass(project.status)}`}>{statusLabel(project.status)}</span>
               </span>
             </div>
-            <div className="info-row"><span className="info-label">Platform</span><span className="info-value">{project.platform.map((t: string, i: number) => <span key={i} className="tag">{t}</span>)}</span></div>
+            <div className="info-row"><span className="info-label">Platform</span><span className="info-value">{(project.platform ?? []).map((t: string, i: number) => <span key={i} className="tag">{t}</span>)}</span></div>
             <div className="info-row"><span className="info-label">Repository</span><span className="info-value" style={{ color: "var(--accent)" }}>{project.repoUrl || "—"}</span></div>
             <div className="info-row">
               <span className="info-label">Cost / Month</span>

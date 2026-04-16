@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
  */
 export async function ensureProjectSchema(): Promise<void> {
   if (!process.env.DATABASE_URL) return;
+  if (process.env.NEXT_PHASE === "phase-production-build") return;
 
   try {
     const webBasedRows = await prisma.$queryRaw<[{ exists: boolean }]>`
@@ -69,7 +70,105 @@ export async function ensureProjectSchema(): Promise<void> {
       await prisma.$executeRawUnsafe(`ALTER TABLE "Project" ALTER COLUMN "costPerMonth" DROP DEFAULT;`);
       await prisma.$executeRawUnsafe(`ALTER TABLE "Project" ALTER COLUMN "costPerMonth" TYPE TEXT USING ("costPerMonth"::text);`);
     }
+
+    await ensureProjectInfraTableAndRows();
   } catch (e) {
     console.error("[ensureProjectSchema] gagal menyelaraskan DB:", e);
+  }
+}
+
+/** Tabel ProjectInfra + baris per project (sering ketinggalan jika migrate deploy gagal). */
+async function ensureProjectInfraTableAndRows(): Promise<void> {
+  const tableExistsRows = await prisma.$queryRaw<[{ exists: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'ProjectInfra'
+    ) AS "exists"
+  `;
+  const tableExists = Boolean(tableExistsRows[0]?.exists);
+
+  if (!tableExists) {
+    await prisma.$executeRawUnsafe(`
+CREATE TABLE IF NOT EXISTS "ProjectInfra" (
+    "id" TEXT NOT NULL,
+    "projectId" TEXT NOT NULL,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "envName" TEXT NOT NULL,
+    "targetGroup" TEXT,
+    "loadBalancer" TEXT,
+    "serverIp" TEXT,
+    "hosting" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "cdn" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "databases" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    CONSTRAINT "ProjectInfra_pkey" PRIMARY KEY ("id")
+);
+`);
+    await prisma.$executeRawUnsafe(
+      `CREATE UNIQUE INDEX IF NOT EXISTS "ProjectInfra_projectId_envName_key" ON "ProjectInfra"("projectId", "envName");`
+    );
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "ProjectInfra_projectId_idx" ON "ProjectInfra"("projectId");`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "ProjectInfra" DROP CONSTRAINT IF EXISTS "ProjectInfra_projectId_fkey";`);
+    await prisma.$executeRawUnsafe(`
+ALTER TABLE "ProjectInfra" ADD CONSTRAINT "ProjectInfra_projectId_fkey"
+  FOREIGN KEY ("projectId") REFERENCES "Project"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+`);
+
+    const legacyEnv = await prisma.$queryRaw<[{ exists: boolean }]>`
+      SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'Project' AND column_name = 'environment'
+      ) AS "exists"
+    `;
+
+    if (legacyEnv[0]?.exists) {
+      await prisma.$executeRawUnsafe(`
+INSERT INTO "ProjectInfra" ("id", "projectId", "sortOrder", "envName", "targetGroup", "loadBalancer", "serverIp", "hosting", "cdn", "databases")
+SELECT
+  gen_random_uuid()::text,
+  "id",
+  0,
+  COALESCE(NULLIF(trim("environment"), ''), 'production'),
+  "targetGroup",
+  "loadBalancer",
+  "serverIp",
+  COALESCE("hosting", ARRAY[]::TEXT[]),
+  COALESCE("cdn", ARRAY[]::TEXT[]),
+  COALESCE("databases", ARRAY[]::TEXT[])
+FROM "Project";
+`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Project" DROP COLUMN IF EXISTS "environment";`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Project" DROP COLUMN IF EXISTS "serverIp";`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Project" DROP COLUMN IF EXISTS "targetGroup";`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Project" DROP COLUMN IF EXISTS "loadBalancer";`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Project" DROP COLUMN IF EXISTS "hosting";`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Project" DROP COLUMN IF EXISTS "cdn";`);
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Project" DROP COLUMN IF EXISTS "databases";`);
+    }
+  }
+
+  const backfillRows = await prisma.$queryRaw<[{ projects: bigint; infras: bigint }]>`
+    SELECT
+      (SELECT COUNT(*)::bigint FROM "Project") AS projects,
+      (SELECT COUNT(*)::bigint FROM "ProjectInfra") AS infras
+  `;
+  const nProj = Number(backfillRows[0]?.projects ?? 0);
+  const nInf = Number(backfillRows[0]?.infras ?? 0);
+  if (nProj > 0 && nInf === 0) {
+    await prisma.$executeRawUnsafe(`
+INSERT INTO "ProjectInfra" ("id", "projectId", "sortOrder", "envName", "targetGroup", "loadBalancer", "serverIp", "hosting", "cdn", "databases")
+SELECT
+  gen_random_uuid()::text,
+  p."id",
+  0,
+  'production',
+  NULL,
+  NULL,
+  NULL,
+  ARRAY[]::TEXT[],
+  ARRAY[]::TEXT[],
+  ARRAY[]::TEXT[]
+FROM "Project" p
+WHERE NOT EXISTS (SELECT 1 FROM "ProjectInfra" x WHERE x."projectId" = p."id");
+`);
   }
 }
