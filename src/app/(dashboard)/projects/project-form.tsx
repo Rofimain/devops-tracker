@@ -4,17 +4,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { slugify } from "@/lib/utils";
 import { CreatableSelect } from "@/components/creatable-select";
+import { emptyInfraRow, type InfraFormRow, orderInfraRows } from "@/lib/project-infra";
+import { ProjectInfraFields } from "./project-infra-fields";
 
 const LS = {
   categories: "devops-tracker:project:categories",
   statuses: "devops-tracker:project:statuses",
-  environments: "devops-tracker:project:environments",
   webBased: "devops-tracker:project:web-based",
 } as const;
 
 const PRESET_STATUSES = ["ACTIVE", "MAINTENANCE", "DEPRECATED", "PLANNING"];
 const PRESET_CATEGORIES = ["Internal", "API", "CMS", "Data", "Commerce", "Auth", "Infra", "Other"];
-const PRESET_ENVIRONMENTS = ["production", "staging", "development"];
 const PRESET_WEB_BASED = ["Yes", "No"];
 
 interface ProjectFormData {
@@ -28,16 +28,25 @@ interface ProjectFormData {
   management?: string | null;
   status?: string;
   platform?: string[];
-  environment?: string | null;
-  serverIp?: string | null;
-  targetGroup?: string | null;
-  loadBalancer?: string | null;
-  hosting?: string[];
-  cdn?: string[];
-  databases?: string[];
   webBasedApp?: string;
   costPerMonth?: string | null;
   notes?: string | null;
+  infras?: InfraFormRow[];
+}
+
+function mapPrismaInfras(raw: unknown): InfraFormRow[] {
+  if (!Array.isArray(raw) || raw.length === 0) return [emptyInfraRow("production")];
+  return orderInfraRows(
+    raw.map((r: any) => ({
+      envName: String(r.envName ?? "production"),
+      targetGroup: r.targetGroup ?? "",
+      loadBalancer: r.loadBalancer ?? "",
+      serverIp: r.serverIp ?? "",
+      hosting: Array.isArray(r.hosting) ? r.hosting.map(String) : [],
+      cdn: Array.isArray(r.cdn) ? r.cdn.map(String) : [],
+      databases: Array.isArray(r.databases) ? r.databases.map(String) : [],
+    }))
+  );
 }
 
 function normalizeCostForForm(v: unknown): string | null {
@@ -66,24 +75,18 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
       management: "",
       status: "ACTIVE",
       platform: [],
-      environment: "production",
-      serverIp: "",
-      targetGroup: "",
-      loadBalancer: "",
-      hosting: [],
-      cdn: [],
-      databases: [],
       webBasedApp: "Yes",
       costPerMonth: null,
       notes: "",
+      infras: [emptyInfraRow("production")],
     };
+    const dv = defaultValues;
     return {
       ...base,
-      ...defaultValues,
-      webBasedApp: normalizeWebBased(
-        defaultValues?.webBasedApp ?? (defaultValues as { isWebApp?: boolean } | undefined)?.isWebApp
-      ),
-      costPerMonth: normalizeCostForForm(defaultValues?.costPerMonth),
+      ...dv,
+      webBasedApp: normalizeWebBased(dv?.webBasedApp ?? (dv as { isWebApp?: boolean } | undefined)?.isWebApp),
+      costPerMonth: normalizeCostForForm(dv?.costPerMonth),
+      infras: mapPrismaInfras(dv?.infras),
     };
   });
 
@@ -95,11 +98,16 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const infras = form.infras ?? [];
+    if (infras.length === 0) {
+      setError("Pilih minimal satu environment untuk infrastruktur.");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
       const slug = mode === "create" ? slugify(form.name ?? "") : form.slug;
-      const payload = { ...form, slug };
+      const payload = { ...form, slug, infras };
       const res = await fetch(mode === "create" ? "/api/projects" : `/api/projects/${form.id}`, {
         method: mode === "create" ? "POST" : "PUT",
         headers: { "Content-Type": "application/json" },
@@ -208,7 +216,7 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
           <span className="card-title">Infrastruktur</span>
         </div>
         <div className="card-body">
-          <div className="grid-2">
+          <div className="grid-2" style={{ marginBottom: 8 }}>
             <CreatableSelect
               label="Web-based Application?"
               value={form.webBasedApp ?? "Yes"}
@@ -216,50 +224,9 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
               presetOptions={PRESET_WEB_BASED}
               storageKey={LS.webBased}
             />
-            <CreatableSelect
-              label="Environment"
-              value={form.environment ?? "production"}
-              onChange={(v) => set("environment", v)}
-              presetOptions={PRESET_ENVIRONMENTS}
-              storageKey={LS.environments}
-            />
-            <div className="form-group">
-              <label className="form-label">Target Group</label>
-              <input className="form-input mono" value={form.targetGroup ?? ""} onChange={(e) => set("targetGroup", e.target.value)} placeholder="portal-tg-prod" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Load Balancer</label>
-              <input className="form-input mono" value={form.loadBalancer ?? ""} onChange={(e) => set("loadBalancer", e.target.value)} placeholder="ALB-portal-prod" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Server IP</label>
-              <input className="form-input mono" value={form.serverIp ?? ""} onChange={(e) => set("serverIp", e.target.value)} placeholder="10.0.1.45" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">
-                Hosting <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(pisah koma)</span>
-              </label>
-              <input className="form-input" defaultValue={(form.hosting ?? []).join(", ")} onChange={(e) => handleArrayInput("hosting", e.target.value)} placeholder="AWS EC2 t3.medium" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">
-                CDN / Proxy <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(pisah koma)</span>
-              </label>
-              <input className="form-input" defaultValue={(form.cdn ?? []).join(", ")} onChange={(e) => handleArrayInput("cdn", e.target.value)} placeholder="Cloudflare" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">
-                Database <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(pisah koma)</span>
-              </label>
-              <input
-                className="form-input"
-                defaultValue={(form.databases ?? []).join(", ")}
-                onChange={(e) => handleArrayInput("databases", e.target.value)}
-                placeholder="PostgreSQL 16, Redis 7"
-              />
-            </div>
           </div>
-          <div className="form-group">
+          <ProjectInfraFields infras={form.infras ?? []} onChange={(next) => set("infras", next)} />
+          <div className="form-group" style={{ marginTop: 12 }}>
             <label className="form-label">Notes / Catatan Tambahan</label>
             <textarea className="form-textarea" value={form.notes ?? ""} onChange={(e) => set("notes", e.target.value)} placeholder="Catatan konfigurasi..." />
           </div>

@@ -1,4 +1,4 @@
-import { PrismaClient, Role } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -17,7 +17,6 @@ async function main() {
     prisma.tool.upsert({ where: { id: "tool-redis" }, update: {}, create: { id: "tool-redis", name: "Redis", category: "Database", version: "7.2", docsUrl: "https://redis.io/docs" } }),
   ]);
 
-  // Sample project
   const project = await prisma.project.upsert({
     where: { slug: "portal-internal" },
     update: {},
@@ -31,19 +30,35 @@ async function main() {
       management: "DevOps Team",
       status: "ACTIVE",
       platform: ["Next.js 14", "Node 20"],
-      environment: "production",
-      serverIp: "10.0.1.45",
-      targetGroup: "portal-tg-prod",
-      loadBalancer: "ALB-portal-prod",
-      hosting: ["AWS EC2 t3.medium"],
-      cdn: ["Cloudflare"],
-      databases: ["PostgreSQL 16", "Redis 7"],
       webBasedApp: "Yes",
       costPerMonth: "45",
+      infras: {
+        create: [
+          {
+            sortOrder: 0,
+            envName: "production",
+            targetGroup: "portal-tg-prod",
+            loadBalancer: "ALB-portal-prod",
+            serverIp: "10.0.1.45",
+            hosting: ["AWS EC2 t3.medium"],
+            cdn: ["Cloudflare"],
+            databases: ["PostgreSQL 16", "Redis 7"],
+          },
+          {
+            sortOrder: 1,
+            envName: "staging",
+            targetGroup: "portal-tg-stg",
+            loadBalancer: "ALB-portal-stg",
+            serverIp: "10.0.2.10",
+            hosting: ["AWS EC2 t3.small"],
+            cdn: [],
+            databases: ["PostgreSQL 16"],
+          },
+        ],
+      },
     },
   });
 
-  // Link tools to project
   for (const tool of [tools[0], tools[1], tools[2], tools[3], tools[4], tools[5], tools[6]]) {
     await prisma.projectTool.upsert({
       where: { projectId_toolId: { projectId: project.id, toolId: tool.id } },
@@ -52,7 +67,6 @@ async function main() {
     });
   }
 
-  // Sample doc
   await prisma.doc.upsert({
     where: { id: "doc-cicd" },
     update: {},

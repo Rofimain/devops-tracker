@@ -24,7 +24,6 @@ export default async function DocsPage({ searchParams }: { searchParams: { categ
         action={<Link href="/docs/new" className="btn btn-primary"><Plus size={13} /> New Doc</Link>}
       />
       <div className="app-content">
-        {/* Search + Filters */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
           <div className="search-bar">
             <Search size={13} style={{ color: "var(--text-muted)" }} />
@@ -45,24 +44,42 @@ export default async function DocsPage({ searchParams }: { searchParams: { categ
               <Link href="/docs/new" className="btn btn-primary btn-sm">Tulis Dokumentasi Pertama</Link>
             </div>
           ) : (
-            docs.map((doc) => (
-              <Link key={doc.id} href={`/docs/${doc.id}`} className="doc-item" style={{ textDecoration: "none" }}>
-                <div className="doc-icon"><FileText size={14} style={{ color: "var(--text-muted)" }} /></div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                    <div>
-                      <div style={{ fontWeight: 600, fontSize: 13, color: "var(--text-primary)" }}>{doc.title}</div>
-                      <div style={{ marginTop: 4, display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
-                        {doc.category && <span className="badge badge-blue" style={{ fontSize: 10 }}>{doc.category}</span>}
-                        {doc.tags.map((t, i) => <span key={i} className="tag">{t}</span>)}
-                        {doc.project && <span className="tag">📁 {doc.project.name}</span>}
-                      </div>
-                    </div>
-                    <span style={{ fontSize: 11, color: "var(--text-muted)", flexShrink: 0, marginLeft: 12 }}>{timeAgo(doc.updatedAt)}</span>
-                  </div>
-                </div>
-              </Link>
-            ))
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Judul</th>
+                    <th>Project</th>
+                    <th>Category</th>
+                    <th>Tags</th>
+                    <th>Updated</th>
+                    <th style={{ width: 72 }}></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {docs.map((doc) => (
+                    <tr key={doc.id}>
+                      <td style={{ fontWeight: 600, maxWidth: 260 }}>
+                        <Link href={`/docs/${doc.id}`} style={{ color: "var(--text-primary)", textDecoration: "none" }}>{doc.title}</Link>
+                      </td>
+                      <td style={{ fontSize: 12 }}>
+                        {doc.project ? (
+                          <Link href={`/projects/${doc.project.slug}`} style={{ color: "var(--accent)" }}>{doc.project.name}</Link>
+                        ) : (
+                          <span style={{ color: "var(--text-muted)" }}>—</span>
+                        )}
+                      </td>
+                      <td>{doc.category ? <span className="badge badge-blue" style={{ fontSize: 10 }}>{doc.category}</span> : "—"}</td>
+                      <td style={{ fontSize: 11, maxWidth: 200 }}>
+                        {doc.tags.slice(0, 4).map((t, i) => <span key={i} className="tag">{t}</span>)}
+                      </td>
+                      <td style={{ fontSize: 11, color: "var(--text-muted)", whiteSpace: "nowrap" }}>{timeAgo(doc.updatedAt)}</td>
+                      <td><Link href={`/docs/${doc.id}`} className="btn btn-sm">Buka</Link></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>

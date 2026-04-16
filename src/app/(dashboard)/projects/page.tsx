@@ -24,7 +24,7 @@ export default async function ProjectsPage({
     prisma.project.findMany({
       where,
       orderBy: { updatedAt: "desc" },
-      include: { _count: { select: { tools: true, docs: true } } },
+      include: { _count: { select: { tools: true, docs: true } }, infras: { orderBy: { sortOrder: "asc" } } },
     }),
     prisma.project.groupBy({ by: ["status"], _count: { id: true } }),
   ]);
@@ -77,6 +77,7 @@ export default async function ProjectsPage({
                   <th>Status</th>
                   <th>Platform / Tech</th>
                   <th className="col-infra">Web App</th>
+                  <th className="col-infra">Environment</th>
                   <th className="col-infra">Target Group</th>
                   <th className="col-infra">Load Balancer</th>
                   <th className="col-infra">Hosting / CDN</th>
@@ -89,7 +90,7 @@ export default async function ProjectsPage({
               <tbody>
                 {projects.length === 0 ? (
                   <tr>
-                    <td colSpan={16} style={{ textAlign: "center", padding: "40px 0", color: "var(--text-muted)" }}>
+                    <td colSpan={17} style={{ textAlign: "center", padding: "40px 0", color: "var(--text-muted)" }}>
                       Belum ada project.{" "}
                       <Link href="/projects/new" style={{ color: "var(--accent)" }}>Tambah project pertama →</Link>
                     </td>
@@ -120,13 +121,30 @@ export default async function ProjectsPage({
                       <td className="col-infra">
                         <span className={`badge ${webBasedBadgeClass(p.webBasedApp)}`}>{p.webBasedApp}</span>
                       </td>
-                      <td className="col-infra mono">{p.targetGroup || "—"}</td>
-                      <td className="col-infra mono">{p.loadBalancer || "—"}</td>
                       <td className="col-infra">
-                        {[...p.hosting, ...p.cdn].map((h, j) => <span key={j} className="tag">{h}</span>)}
+                        {p.infras.length === 0 ? (
+                          "—"
+                        ) : (
+                          p.infras.map((inf) => (
+                            <span key={inf.id} className="badge badge-blue" style={{ marginRight: 4, marginBottom: 4, fontSize: 10, textTransform: "capitalize" }}>
+                              {inf.envName}
+                            </span>
+                          ))
+                        )}
+                      </td>
+                      <td className="col-infra mono">{p.infras[0]?.targetGroup || "—"}</td>
+                      <td className="col-infra mono">{p.infras[0]?.loadBalancer || "—"}</td>
+                      <td className="col-infra">
+                        {p.infras.length === 0
+                          ? "—"
+                          : [...(p.infras[0]?.hosting ?? []), ...(p.infras[0]?.cdn ?? [])].map((h, j) => <span key={j} className="tag">{h}</span>)}
                       </td>
                       <td className="col-infra">
-                        {p.databases.map((d, j) => <span key={j} className="tag">{d}</span>)}
+                        {p.infras.length === 0
+                          ? "—"
+                          : (p.infras[0]?.databases ?? []).length === 0
+                            ? "—"
+                            : (p.infras[0]?.databases ?? []).map((d, j) => <span key={j} className="tag">{d}</span>)}
                       </td>
                       <td>
                         {p.repoUrl ? (

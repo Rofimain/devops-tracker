@@ -2,11 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { normalizeCostPerMonth, slugify } from "@/lib/utils";
+import { parseInfrasFromBody } from "@/lib/project-infra";
 
 export async function GET() {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const projects = await prisma.project.findMany({ orderBy: { updatedAt: "desc" }, include: { _count: { select: { tools: true, docs: true } } } });
+  const projects = await prisma.project.findMany({
+    orderBy: { updatedAt: "desc" },
+    include: { _count: { select: { tools: true, docs: true } }, infras: { orderBy: { sortOrder: "asc" } } },
+  });
   return NextResponse.json(projects);
 }
 
@@ -16,6 +20,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const slug = body.slug || slugify(body.name);
+    const infras = parseInfrasFromBody(body);
     const project = await prisma.project.create({
       data: {
         name: body.name,
@@ -27,19 +32,24 @@ export async function POST(req: NextRequest) {
         management: body.management || null,
         status: body.status || "ACTIVE",
         platform: body.platform || [],
-        environment: body.environment || "production",
-        serverIp: body.serverIp || null,
-        targetGroup: body.targetGroup || null,
-        loadBalancer: body.loadBalancer || null,
-        hosting: body.hosting || [],
-        cdn: body.cdn || [],
-        databases: body.databases || [],
         webBasedApp: typeof body.webBasedApp === "string" && body.webBasedApp.trim() ? body.webBasedApp.trim() : "Yes",
         costPerMonth: normalizeCostPerMonth(body.costPerMonth),
         notes: body.notes || null,
+        infras: {
+          create: infras.map((row, i) => ({
+            sortOrder: i,
+            envName: row.envName,
+            targetGroup: row.targetGroup.trim() || null,
+            loadBalancer: row.loadBalancer.trim() || null,
+            serverIp: row.serverIp.trim() || null,
+            hosting: row.hosting,
+            cdn: row.cdn,
+            databases: row.databases,
+          })),
+        },
       },
+      include: { infras: { orderBy: { sortOrder: "asc" } } },
     });
-    // Log activity
     await prisma.activity.create({
       data: { action: "CREATE", details: `Project "${project.name}" dibuat`, userId: session.user.id, projectId: project.id },
     });

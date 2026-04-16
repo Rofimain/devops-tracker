@@ -8,7 +8,7 @@ import { Plus } from "lucide-react";
 export default async function DashboardPage() {
   const session = await auth();
 
-  const [projectCount, toolCount, docCount, userCount, projects, activities, hostingStats, dbStats] =
+  const [projectCount, toolCount, docCount, userCount, projects, activities, infraAgg] =
     await Promise.all([
       prisma.project.count(),
       prisma.tool.count(),
@@ -17,30 +17,50 @@ export default async function DashboardPage() {
       prisma.project.findMany({
         take: 6,
         orderBy: { updatedAt: "desc" },
-        select: { id: true, name: true, slug: true, url: true, status: true, platform: true, hosting: true },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          url: true,
+          status: true,
+          platform: true,
+          infras: { orderBy: { sortOrder: "asc" }, select: { hosting: true } },
+        },
       }),
       prisma.activity.findMany({
         take: 8,
         orderBy: { createdAt: "desc" },
         include: { user: { select: { name: true } }, project: { select: { name: true } } },
       }),
-      prisma.project.findMany({ select: { hosting: true } }),
-      prisma.project.findMany({ select: { databases: true } }),
+      prisma.project.findMany({ select: { infras: { select: { hosting: true, databases: true } } } }),
     ]);
 
-  // Compute hosting distribution
+  // Compute hosting distribution (per environment row)
   const hostingMap: Record<string, number> = {};
-  hostingStats.forEach((p) => p.hosting.forEach((h) => {
-    const key = h.toLowerCase().includes("aws") ? "AWS" : h.toLowerCase().includes("gcp") ? "GCP" : h.toLowerCase().includes("azure") ? "Azure" : "VPS/Other";
-    hostingMap[key] = (hostingMap[key] ?? 0) + 1;
-  }));
+  infraAgg.forEach((p) =>
+    p.infras.forEach((inf) =>
+      inf.hosting.forEach((h) => {
+        const key = h.toLowerCase().includes("aws") ? "AWS" : h.toLowerCase().includes("gcp") ? "GCP" : h.toLowerCase().includes("azure") ? "Azure" : "VPS/Other";
+        hostingMap[key] = (hostingMap[key] ?? 0) + 1;
+      })
+    )
+  );
 
-  // Compute DB distribution
   const dbMap: Record<string, number> = {};
-  dbStats.forEach((p) => p.databases.forEach((d) => {
-    const key = d.toLowerCase().includes("postgres") ? "PostgreSQL" : d.toLowerCase().includes("mysql") ? "MySQL" : d.toLowerCase().includes("mongo") ? "MongoDB" : d.split(" ")[0];
-    dbMap[key] = (dbMap[key] ?? 0) + 1;
-  }));
+  infraAgg.forEach((p) =>
+    p.infras.forEach((inf) =>
+      inf.databases.forEach((d) => {
+        const key = d.toLowerCase().includes("postgres")
+          ? "PostgreSQL"
+          : d.toLowerCase().includes("mysql")
+            ? "MySQL"
+            : d.toLowerCase().includes("mongo")
+              ? "MongoDB"
+              : d.split(" ")[0];
+        dbMap[key] = (dbMap[key] ?? 0) + 1;
+      })
+    )
+  );
 
   const activeCount = projects.filter((p) => p.status === "ACTIVE").length;
   const maintenanceCount = projects.filter((p) => p.status === "MAINTENANCE").length;
@@ -130,7 +150,11 @@ export default async function DashboardPage() {
                           {p.url && <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{p.url.replace("https://", "").replace("http://", "")}</div>}
                         </td>
                         <td>{p.platform.slice(0, 2).map((t, i) => <span key={i} className="tag">{t}</span>)}</td>
-                        <td>{p.hosting.slice(0, 1).map((h, i) => <span key={i} className="tag">{h}</span>)}</td>
+                        <td>
+                          {(p.infras[0]?.hosting ?? []).slice(0, 1).map((h, i) => (
+                            <span key={i} className="tag">{h}</span>
+                          ))}
+                        </td>
                         <td>
                           <span className={`badge ${statusBadgeClass(p.status)}`}>{statusLabel(p.status)}</span>
                         </td>

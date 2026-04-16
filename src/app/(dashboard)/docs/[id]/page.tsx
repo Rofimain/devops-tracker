@@ -4,6 +4,7 @@ import { Topbar } from "@/components/topbar";
 import Link from "next/link";
 import { timeAgo } from "@/lib/utils";
 import { Edit } from "lucide-react";
+import { DocDeleteButton } from "./doc-delete-button";
 
 export default async function DocDetailPage({ params }: { params: { id: string } }) {
   const doc = await prisma.doc.findUnique({ where: { id: params.id }, include: { project: { select: { name: true, slug: true } } } });
@@ -14,7 +15,12 @@ export default async function DocDetailPage({ params }: { params: { id: string }
       <Topbar
         title={doc.title}
         breadcrumb="Documentation"
-        action={<Link href={`/docs/${doc.id}/edit`} className="btn btn-sm"><Edit size={12} /> Edit</Link>}
+        action={
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <Link href={`/docs/${doc.id}/edit`} className="btn btn-sm"><Edit size={12} /> Edit</Link>
+            <DocDeleteButton docId={doc.id} title={doc.title} />
+          </div>
+        }
       />
       <div className="app-content">
         <div style={{ maxWidth: 800, margin: "0 auto" }}>

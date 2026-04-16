@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import Link from "next/link";
 import { TOOL_CATEGORY_COLORS, timeAgo, statusBadgeClass, statusLabel, webBasedBadgeClass } from "@/lib/utils";
 import { FileText, Plus, ExternalLink } from "lucide-react";
@@ -55,61 +55,109 @@ export function ProjectDetailTabs({ project }: { project: any }) {
                 <span className={`badge ${webBasedBadgeClass(project.webBasedApp)}`}>{project.webBasedApp}</span>
               </span>
             </div>
-            <div className="info-row"><span className="info-label">Target Group</span><span className="info-value mono">{project.targetGroup || "—"}</span></div>
-            <div className="info-row"><span className="info-label">Load Balancer</span><span className="info-value mono">{project.loadBalancer || "—"}</span></div>
-            <div className="info-row"><span className="info-label">Server IP</span><span className="info-value mono">{project.serverIp || "—"}</span></div>
-            <div className="info-row"><span className="info-label">Hosting</span><span className="info-value">{project.hosting.map((h: string, i: number) => <span key={i} className="tag">{h}</span>)}</span></div>
-            <div className="info-row"><span className="info-label">CDN</span><span className="info-value">{project.cdn.map((c: string, i: number) => <span key={i} className="tag">{c}</span>)}</span></div>
-            <div className="info-row"><span className="info-label">Database</span><span className="info-value">{project.databases.map((d: string, i: number) => <span key={i} className="tag">{d}</span>)}</span></div>
-            <div className="info-row"><span className="info-label">Environment</span><span className="info-value"><span className="badge badge-blue">{project.environment || "production"}</span></span></div>
+            <div className="info-row">
+              <span className="info-label">Environment</span>
+              <span className="info-value" style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                {(project.infras ?? []).length === 0 ? (
+                  "—"
+                ) : (
+                  (project.infras ?? []).map((inf: { envName: string }, i: number) => (
+                    <span key={i} className="badge badge-blue" style={{ textTransform: "capitalize" }}>
+                      {inf.envName}
+                    </span>
+                  ))
+                )}
+              </span>
+            </div>
+            {(project.infras ?? []).map((inf: any) => (
+              <div key={inf.id ?? inf.envName} style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--border)" }}>
+                <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 6, textTransform: "capitalize" }}>{inf.envName}</div>
+                <div className="info-row"><span className="info-label">Target Group</span><span className="info-value mono">{inf.targetGroup || "—"}</span></div>
+                <div className="info-row"><span className="info-label">Load Balancer</span><span className="info-value mono">{inf.loadBalancer || "—"}</span></div>
+                <div className="info-row"><span className="info-label">Server IP</span><span className="info-value mono">{inf.serverIp || "—"}</span></div>
+                <div className="info-row"><span className="info-label">Hosting</span><span className="info-value">{(inf.hosting ?? []).map((h: string, i: number) => <span key={i} className="tag">{h}</span>)}</span></div>
+                <div className="info-row"><span className="info-label">CDN</span><span className="info-value">{(inf.cdn ?? []).map((c: string, i: number) => <span key={i} className="tag">{c}</span>)}</span></div>
+                <div className="info-row"><span className="info-label">Database</span><span className="info-value">{(inf.databases ?? []).map((d: string, i: number) => <span key={i} className="tag">{d}</span>)}</span></div>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
       {/* INFRA */}
       {tab === "infra" && (
-        <div className="grid-2">
-          <div>
-            <div className="sec-label">Compute</div>
-            <div className="cfg-block">
-              <div className="cfg-block-title">Hosting / Server</div>
-              <div className="cfg-grid">
-                <span className="cfg-label">Provider</span><span className="cfg-value">{project.hosting.join(", ") || "—"}</span>
-                <span className="cfg-label">IP Address</span><span className="cfg-value">{project.serverIp || "—"}</span>
-                <span className="cfg-label">Environment</span><span className="cfg-value">{project.environment || "—"}</span>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {(project.infras ?? []).length === 0 ? (
+            <div className="card"><div className="card-body" style={{ color: "var(--text-muted)" }}>Belum ada data infrastruktur per environment.</div></div>
+          ) : (
+            (project.infras ?? []).map((inf: any) => (
+              <div key={inf.id} className="card">
+                <div className="card-header">
+                  <span className="card-title" style={{ textTransform: "capitalize" }}>Environment: {inf.envName}</span>
+                </div>
+                <div className="card-body" style={{ paddingTop: 0 }}>
+                  <div className="grid-2">
+                    <div>
+                      <div className="sec-label">Compute</div>
+                      <div className="cfg-block">
+                        <div className="cfg-block-title">Hosting / Server</div>
+                        <div className="cfg-grid">
+                          <span className="cfg-label">Provider</span><span className="cfg-value">{(inf.hosting ?? []).join(", ") || "—"}</span>
+                          <span className="cfg-label">IP Address</span><span className="cfg-value">{inf.serverIp || "—"}</span>
+                        </div>
+                      </div>
+                      <div className="sec-label" style={{ marginTop: 12 }}>Load Balancer</div>
+                      <div className="cfg-block">
+                        <div className="cfg-block-title">{inf.loadBalancer || "Not configured"}</div>
+                        <div className="cfg-grid">
+                          <span className="cfg-label">Name</span><span className="cfg-value">{inf.loadBalancer || "—"}</span>
+                          <span className="cfg-label">Target Group</span><span className="cfg-value">{inf.targetGroup || "—"}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="sec-label">Database</div>
+                      <div className="cfg-block">
+                        <div className="cfg-block-title">Database(s)</div>
+                        <div className="cfg-grid">
+                          {(inf.databases ?? []).map((d: string, i: number) => (
+                            <Fragment key={`db${i}`}>
+                              <span className="cfg-label">DB {i + 1}</span>
+                              <span className="cfg-value">{d}</span>
+                            </Fragment>
+                          ))}
+                          {(inf.databases ?? []).length === 0 && (
+                            <>
+                              <span className="cfg-label">—</span>
+                              <span className="cfg-value">Not configured</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="sec-label" style={{ marginTop: 12 }}>CDN / DNS</div>
+                      <div className="cfg-block">
+                        <div className="cfg-block-title">CDN / Proxy</div>
+                        <div className="cfg-grid">
+                          {(inf.cdn ?? []).map((c: string, i: number) => (
+                            <Fragment key={`cdn${i}`}>
+                              <span className="cfg-label">CDN {i + 1}</span>
+                              <span className="cfg-value">{c}</span>
+                            </Fragment>
+                          ))}
+                          {(inf.cdn ?? []).length === 0 && (
+                            <>
+                              <span className="cfg-label">—</span>
+                              <span className="cfg-value">Not configured</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="sec-label" style={{ marginTop: 12 }}>Load Balancer</div>
-            <div className="cfg-block">
-              <div className="cfg-block-title">{project.loadBalancer || "Not configured"}</div>
-              <div className="cfg-grid">
-                <span className="cfg-label">Name</span><span className="cfg-value">{project.loadBalancer || "—"}</span>
-                <span className="cfg-label">Target Group</span><span className="cfg-value">{project.targetGroup || "—"}</span>
-              </div>
-            </div>
-          </div>
-          <div>
-            <div className="sec-label">Database</div>
-            <div className="cfg-block">
-              <div className="cfg-block-title">Database(s)</div>
-              <div className="cfg-grid">
-                {project.databases.map((d: string, i: number) => (
-                  <><span key={`l${i}`} className="cfg-label">DB {i + 1}</span><span key={`v${i}`} className="cfg-value">{d}</span></>
-                ))}
-                {project.databases.length === 0 && <><span className="cfg-label">—</span><span className="cfg-value">Not configured</span></>}
-              </div>
-            </div>
-            <div className="sec-label" style={{ marginTop: 12 }}>CDN / DNS</div>
-            <div className="cfg-block">
-              <div className="cfg-block-title">CDN / Proxy</div>
-              <div className="cfg-grid">
-                {project.cdn.map((c: string, i: number) => (
-                  <><span key={`l${i}`} className="cfg-label">CDN {i + 1}</span><span key={`v${i}`} className="cfg-value">{c}</span></>
-                ))}
-                {project.cdn.length === 0 && <><span className="cfg-label">—</span><span className="cfg-value">Not configured</span></>}
-              </div>
-            </div>
-          </div>
+            ))
+          )}
         </div>
       )}
 

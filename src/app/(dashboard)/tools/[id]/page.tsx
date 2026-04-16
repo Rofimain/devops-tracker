@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/topbar";
 import Link from "next/link";
 import { TOOL_CATEGORY_COLORS, statusBadgeClass, statusLabel } from "@/lib/utils";
-import { ExternalLink, Edit, Trash2 } from "lucide-react";
+import { ExternalLink, Edit } from "lucide-react";
+import { ToolDeleteButton } from "./tool-delete-button";
 
 export default async function ToolDetailPage({ params }: { params: { id: string } }) {
   const tool = await prisma.tool.findUnique({
@@ -23,10 +24,11 @@ export default async function ToolDetailPage({ params }: { params: { id: string 
         title={tool.name}
         breadcrumb="Tools Catalog"
         action={
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <Link href={`/tools/${tool.id}/edit`} className="btn btn-sm">
               <Edit size={12} /> Edit
             </Link>
+            <ToolDeleteButton toolId={tool.id} toolName={tool.name} usedInProjects={tool.projects.length} />
           </div>
         }
       />

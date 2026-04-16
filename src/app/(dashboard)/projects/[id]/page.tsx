@@ -5,11 +5,13 @@ import Link from "next/link";
 import { statusBadgeClass, statusLabel, TOOL_CATEGORY_COLORS, timeAgo } from "@/lib/utils";
 import { ProjectDetailTabs } from "./project-detail-tabs";
 import { Edit, Plus, ExternalLink } from "lucide-react";
+import { ProjectDeleteButton } from "./project-delete-button";
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
   const project = await prisma.project.findUnique({
     where: { slug: params.id },
     include: {
+      infras: { orderBy: { sortOrder: "asc" } },
       tools: { include: { tool: true }, orderBy: { createdAt: "asc" } },
       docs: { orderBy: { updatedAt: "desc" } },
       activities: { take: 20, orderBy: { createdAt: "desc" }, include: { user: { select: { name: true } } } },
@@ -25,10 +27,11 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         title={project.name}
         breadcrumb="Projects"
         action={
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <span className={`badge ${statusBadgeClass(project.status)}`}>{statusLabel(project.status)}</span>
             <Link href={`/projects/${project.slug}/edit`} className="btn btn-sm"><Edit size={12} /> Edit</Link>
             <Link href={`/projects/${project.slug}/tools/add`} className="btn btn-primary btn-sm"><Plus size={12} /> Add Tool</Link>
+            <ProjectDeleteButton projectId={project.id} projectName={project.name} />
           </div>
         }
       />
@@ -43,7 +46,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {project.url && <a href={project.url} target="_blank" rel="noopener noreferrer" className="tag" style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 3 }}>🌐 {project.url.replace(/^https?:\/\//, "")}<ExternalLink size={9} /></a>}
               {project.repoUrl && <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" className="tag" style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 3 }}>📦 {project.repoUrl.replace("https://github.com/", "")}<ExternalLink size={9} /></a>}
-              {project.hosting[0] && <span className="tag">🖥 {project.hosting[0]}</span>}
+              {project.infras[0]?.hosting[0] && <span className="tag">🖥 {project.infras[0].hosting[0]}</span>}
               {project.costPerMonth?.trim() && <span className="tag">💰 {project.costPerMonth}</span>}
               {project.management && <span className="tag">👤 {project.management}</span>}
             </div>

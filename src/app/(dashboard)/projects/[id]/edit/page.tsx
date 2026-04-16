@@ -11,12 +11,25 @@ function sanitize<T extends Record<string, any>>(obj: T) {
 }
 
 export default async function EditProjectPage({ params }: { params: { id: string } }) {
-  const project = await prisma.project.findUnique({ where: { slug: params.id } });
+  const project = await prisma.project.findUnique({
+    where: { slug: params.id },
+    include: { infras: { orderBy: { sortOrder: "asc" } } },
+  });
   if (!project) notFound();
 
+  const { infras: prismaInfras, ...proj } = project;
   const defaultValues = sanitize({
-    ...project,
+    ...proj,
     costPerMonth: project.costPerMonth != null && String(project.costPerMonth).trim() !== "" ? String(project.costPerMonth) : undefined,
+    infras: prismaInfras.map((r) => ({
+      envName: r.envName,
+      targetGroup: r.targetGroup ?? "",
+      loadBalancer: r.loadBalancer ?? "",
+      serverIp: r.serverIp ?? "",
+      hosting: r.hosting ?? [],
+      cdn: r.cdn ?? [],
+      databases: r.databases ?? [],
+    })),
   });
 
   return (
