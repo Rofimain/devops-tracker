@@ -13,14 +13,20 @@ function sanitize<T extends Record<string, any>>(obj: T) {
 export default async function EditProjectPage({ params }: { params: { id: string } }) {
   const project = await prisma.project.findUnique({
     where: { slug: params.id },
-    include: { infras: { orderBy: { sortOrder: "asc" } } },
+    include: {
+      infras: { orderBy: { sortOrder: "asc" } },
+      tools: { select: { toolId: true } },
+      docs: { select: { id: true } },
+    },
   });
   if (!project) notFound();
 
-  const { infras: prismaInfras, ...proj } = project;
+  const { infras: prismaInfras, tools: projectTools, docs: projectDocs, ...proj } = project;
   const defaultValues = sanitize({
     ...proj,
     costPerMonth: project.costPerMonth != null && String(project.costPerMonth).trim() !== "" ? String(project.costPerMonth) : undefined,
+    toolIds: projectTools.map((t) => t.toolId),
+    docIds: projectDocs.map((d) => d.id),
     infras: prismaInfras.map((r) => ({
       envName: r.envName,
       targetGroup: r.targetGroup ?? "",

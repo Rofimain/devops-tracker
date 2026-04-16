@@ -6,6 +6,7 @@ import { slugify } from "@/lib/utils";
 import { CreatableSelect } from "@/components/creatable-select";
 import { emptyInfraRow, type InfraFormRow, orderInfraRows } from "@/lib/project-infra";
 import { ProjectInfraFields } from "./project-infra-fields";
+import { ProjectToolsDocsPicker } from "./project-tools-docs-picker";
 
 const LS = {
   categories: "devops-tracker:project:categories",
@@ -32,6 +33,8 @@ interface ProjectFormData {
   costPerMonth?: string | null;
   notes?: string | null;
   infras?: InfraFormRow[];
+  toolIds?: string[];
+  docIds?: string[];
 }
 
 function mapPrismaInfras(raw: unknown): InfraFormRow[] {
@@ -79,6 +82,8 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
       costPerMonth: null,
       notes: "",
       infras: [emptyInfraRow("production")],
+      toolIds: [],
+      docIds: [],
     };
     const dv = defaultValues;
     return {
@@ -87,6 +92,8 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
       webBasedApp: normalizeWebBased(dv?.webBasedApp ?? (dv as { isWebApp?: boolean } | undefined)?.isWebApp),
       costPerMonth: normalizeCostForForm(dv?.costPerMonth),
       infras: mapPrismaInfras(dv?.infras),
+      toolIds: Array.isArray(dv?.toolIds) ? [...dv.toolIds] : [],
+      docIds: Array.isArray(dv?.docIds) ? [...dv.docIds] : [],
     };
   });
 
@@ -107,7 +114,13 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
     setError("");
     try {
       const slug = mode === "create" ? slugify(form.name ?? "") : form.slug;
-      const payload = { ...form, slug, infras };
+      const payload = {
+        ...form,
+        slug,
+        infras,
+        toolIds: form.toolIds ?? [],
+        docIds: form.docIds ?? [],
+      };
       const res = await fetch(mode === "create" ? "/api/projects" : `/api/projects/${form.id}`, {
         method: mode === "create" ? "POST" : "PUT",
         headers: { "Content-Type": "application/json" },
@@ -232,6 +245,13 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
           </div>
         </div>
       </div>
+
+      <ProjectToolsDocsPicker
+        toolIds={form.toolIds ?? []}
+        docIds={form.docIds ?? []}
+        onToolIdsChange={(ids) => set("toolIds", ids)}
+        onDocIdsChange={(ids) => set("docIds", ids)}
+      />
 
       <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
         <button type="button" className="btn" onClick={() => router.back()}>
