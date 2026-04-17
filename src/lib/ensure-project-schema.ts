@@ -72,9 +72,44 @@ export async function ensureProjectSchema(): Promise<void> {
     }
 
     await ensureProjectInfraTableAndRows();
+    await ensureLogbookTable();
   } catch (e) {
     console.error("[ensureProjectSchema] gagal menyelaraskan DB:", e);
   }
+}
+
+/** Tabel LogbookEntry (jika migrasi belum dijalankan di server produksi). */
+async function ensureLogbookTable(): Promise<void> {
+  const tableExistsRows = await prisma.$queryRaw<[{ exists: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'LogbookEntry'
+    ) AS "exists"
+  `;
+  if (Boolean(tableExistsRows[0]?.exists)) return;
+
+  await prisma.$executeRawUnsafe(`
+CREATE TABLE IF NOT EXISTS "LogbookEntry" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "isoYear" INTEGER NOT NULL,
+    "isoWeek" INTEGER NOT NULL,
+    "category" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "body" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "LogbookEntry_pkey" PRIMARY KEY ("id")
+);
+`);
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "LogbookEntry_isoYear_isoWeek_idx" ON "LogbookEntry"("isoYear", "isoWeek");`
+  );
+  await prisma.$executeRawUnsafe(`ALTER TABLE "LogbookEntry" DROP CONSTRAINT IF EXISTS "LogbookEntry_userId_fkey";`);
+  await prisma.$executeRawUnsafe(`
+ALTER TABLE "LogbookEntry" ADD CONSTRAINT "LogbookEntry_userId_fkey"
+  FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+`);
 }
 
 /** Tabel ProjectInfra + baris per project (sering ketinggalan jika migrate deploy gagal). */
