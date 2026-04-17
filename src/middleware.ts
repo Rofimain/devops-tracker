@@ -16,17 +16,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  const authSecret = secret();
-
+  /** Jangan redirect dari middleware untuk /login: getToken di Edge bisa beda dengan auth() di Server Component → loop ERR_TOO_MANY_REDIRECTS. */
   if (path === "/login") {
-    const token = await getToken({ req: request, secret: authSecret });
-    if (token) {
-      return NextResponse.redirect(new URL("/", request.url));
-    }
     return NextResponse.next();
   }
 
-  const token = await getToken({ req: request, secret: authSecret });
+  const authSecret = secret();
+  const isHttps = request.nextUrl.protocol === "https:";
+  const token = await getToken({
+    req: request,
+    secret: authSecret,
+    secureCookie: isHttps,
+  });
 
   if (!token) {
     if (path.startsWith("/api/")) {
