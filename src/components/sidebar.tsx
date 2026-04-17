@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
-import { LayoutDashboard, List, Wrench, FileText, Users, Settings, LogOut, Server } from "lucide-react";
+import { LayoutDashboard, List, Wrench, FileText, Users, Settings, LogOut, Server, BookMarked } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Image from "next/image";
 
 const navItems = [
   { section: "Main" },
   { label: "Dashboard", href: "/", icon: LayoutDashboard },
+  { label: "Logbook mingguan", href: "/logbook", icon: BookMarked },
   { label: "Projects", href: "/projects", icon: List, countKey: "projects" },
   { section: "Resources" },
   { label: "Tools Catalog", href: "/tools", icon: Wrench },
