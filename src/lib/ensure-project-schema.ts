@@ -73,6 +73,7 @@ export async function ensureProjectSchema(): Promise<void> {
 
     await ensureProjectInfraTableAndRows();
     await ensureLogbookTable();
+    await ensureCloudflareTables();
   } catch (e) {
     console.error("[ensureProjectSchema] gagal menyelaraskan DB:", e);
   }
@@ -109,6 +110,34 @@ CREATE TABLE IF NOT EXISTS "LogbookEntry" (
   await prisma.$executeRawUnsafe(`
 ALTER TABLE "LogbookEntry" ADD CONSTRAINT "LogbookEntry_userId_fkey"
   FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+`);
+}
+
+async function ensureCloudflareTables(): Promise<void> {
+  await prisma.$executeRawUnsafe(`
+CREATE TABLE IF NOT EXISTS "CloudflareAppConfig" (
+    "id" TEXT NOT NULL,
+    "zoneId" TEXT NOT NULL DEFAULT '',
+    "apiToken" TEXT NOT NULL DEFAULT '',
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "CloudflareAppConfig_pkey" PRIMARY KEY ("id")
+);
+`);
+  await prisma.$executeRawUnsafe(`
+INSERT INTO "CloudflareAppConfig" ("id", "zoneId", "apiToken", "updatedAt")
+VALUES ('default', '', '', CURRENT_TIMESTAMP)
+ON CONFLICT ("id") DO NOTHING;
+`);
+  await prisma.$executeRawUnsafe(`
+CREATE TABLE IF NOT EXISTS "PurgePreset" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "bodyJson" TEXT NOT NULL,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "PurgePreset_pkey" PRIMARY KEY ("id")
+);
 `);
 }
 

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { Role } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { Sidebar } from "@/components/sidebar";
 import { prisma } from "@/lib/prisma";
@@ -9,7 +10,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!session) redirect("/login");
 
   await ensureProjectSchema();
-  const projectCount = await prisma.project.count();
+  const projectCount = session.user.role === Role.OPERATOR ? 0 : await prisma.project.count();
 
   return (
     <div className="app-layout">

@@ -1,10 +1,68 @@
-import NextAuth from "next-auth";
-import { authConfig } from "./auth.config";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-export const { auth: middleware } = NextAuth(authConfig);
+function secret() {
+  return process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
+}
+
+export async function middleware(request: NextRequest) {
+  const path = request.nextUrl.pathname;
+
+  if (path.startsWith("/_next") || path === "/favicon.ico") {
+    return NextResponse.next();
+  }
+  if (path.startsWith("/api/auth")) {
+    return NextResponse.next();
+  }
+
+  const authSecret = secret();
+
+  if (path === "/login") {
+    const token = await getToken({ req: request, secret: authSecret });
+    if (token) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    return NextResponse.next();
+  }
+
+  const token = await getToken({ req: request, secret: authSecret });
+
+  if (!token) {
+    if (path.startsWith("/api/")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const login = new URL("/login", request.url);
+    login.searchParams.set("callbackUrl", path);
+    return NextResponse.redirect(login);
+  }
+
+  const role = (token.role as string | undefined) ?? "MEMBER";
+
+  if (role === "OPERATOR") {
+    if (path.startsWith("/purge")) return NextResponse.next();
+    if (path.startsWith("/api/cloudflare")) return NextResponse.next();
+    if (path.startsWith("/api/purge-presets") && request.method === "GET") {
+      return NextResponse.next();
+    }
+    if (path.startsWith("/api/")) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    return NextResponse.redirect(new URL("/purge", request.url));
+  }
+
+  if (role === "MEMBER") {
+    if (path.startsWith("/purge")) {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    if (path.startsWith("/api/cloudflare") || path.startsWith("/api/purge-presets")) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
+
+  return NextResponse.next();
+}
 
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

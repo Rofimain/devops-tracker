@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const ROLES = ["MEMBER", "ADMIN"];
+const ROLES = ["MEMBER", "ADMIN", "OPERATOR"];
 
 export function UserActions({ userId, currentRole }: { userId: string; currentRole: string }) {
   const router = useRouter();

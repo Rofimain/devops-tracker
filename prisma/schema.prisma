@@ -161,9 +161,28 @@ model LogbookEntry {
   @@index([isoYear, isoWeek])
 }
 
+/// Konfigurasi Cloudflare (satu baris). Zone ID & token disimpan dari UI admin.
+model CloudflareAppConfig {
+  id        String   @id @default("default")
+  zoneId    String   @default("")
+  apiToken  String   @default("") @db.Text
+  updatedAt DateTime @updatedAt
+}
+
+/// Preset body JSON purge (miri koleksi Postman).
+model PurgePreset {
+  id        String   @id @default(cuid())
+  name      String
+  bodyJson  String   @db.Text
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum Role {
   SUPER_ADMIN
   ADMIN
+  OPERATOR
   MEMBER
 }
 

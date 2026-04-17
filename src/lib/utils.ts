@@ -59,6 +59,7 @@ export function webBasedBadgeClass(value: string) {
 export const ROLE_COLORS: Record<string, string> = {
   SUPER_ADMIN: "badge-accent",
   ADMIN: "badge-purple",
+  OPERATOR: "badge-yellow",
   MEMBER: "badge-gray",
 };
 
