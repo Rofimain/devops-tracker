@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth, isAdmin } from "@/lib/auth";
+import { canWriteAppData } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { addIsoWeek, formatWeekParam, parseWeekParam, weekLabel } from "@/lib/logbook-week";
 import { Topbar } from "@/components/topbar";
@@ -46,6 +47,7 @@ export default async function LogbookPage({ searchParams }: { searchParams: { we
           isCurrentWeek={isCurrentWeek}
           currentUserId={session.user.id}
           isAdmin={isAdmin(session.user.role)}
+          canMutate={canWriteAppData(session.user.role)}
         />
       </div>
     </>

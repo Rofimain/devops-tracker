@@ -1,3 +1,5 @@
+import { auth } from "@/lib/auth";
+import { canWriteAppData } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/topbar";
 import Link from "next/link";
@@ -6,6 +8,9 @@ import { Plus } from "lucide-react";
 import { ToolFilters } from "./tool-filters";
 
 export default async function ToolsPage({ searchParams }: { searchParams: { category?: string; q?: string } }) {
+  const session = await auth();
+  const canWrite = canWriteAppData(session?.user?.role);
+
   const where: any = {};
   if (searchParams.category && searchParams.category !== "ALL") where.category = searchParams.category;
   if (searchParams.q) where.OR = [
@@ -34,7 +39,7 @@ export default async function ToolsPage({ searchParams }: { searchParams: { cate
     <>
       <Topbar
         title="Tools Catalog"
-        action={<Link href="/tools/new" className="btn btn-primary"><Plus size={13} /> Add Tool</Link>}
+        action={canWrite ? <Link href="/tools/new" className="btn btn-primary"><Plus size={13} /> Add Tool</Link> : undefined}
       />
       <div className="app-content">
         <ToolFilters filters={catFilters} currentCategory={searchParams.category ?? "ALL"} currentQ={searchParams.q ?? ""} />
@@ -43,7 +48,7 @@ export default async function ToolsPage({ searchParams }: { searchParams: { cate
           <div className="card"><div className="empty-state" style={{ padding: "48px 0" }}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>🔧</div>
             <div>Belum ada tool terdaftar.</div>
-            <Link href="/tools/new" className="btn btn-primary btn-sm">Tambah Tool Pertama</Link>
+            {canWrite ? <Link href="/tools/new" className="btn btn-primary btn-sm">Tambah Tool Pertama</Link> : null}
           </div></div>
         ) : (
           <div className="card">

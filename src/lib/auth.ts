@@ -4,6 +4,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 import { Role } from "@prisma/client";
 import { authConfig } from "@/auth.config";
+import { isEmailAllowedForSignIn, normalizeEmail } from "@/lib/login-allowlist";
 
 const ALLOWED_DOMAIN = process.env.ALLOWED_EMAIL_DOMAIN ?? "";
 const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL ?? "";
@@ -24,9 +25,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (ALLOWED_DOMAIN && !email.endsWith(`@${ALLOWED_DOMAIN}`)) {
         return false;
       }
-      if (email === SUPER_ADMIN_EMAIL) {
+      const allowed = await isEmailAllowedForSignIn(email);
+      if (!allowed) {
+        return "/login?error=InviteOnly";
+      }
+      if (normalizeEmail(email) === normalizeEmail(SUPER_ADMIN_EMAIL)) {
         await prisma.user.updateMany({
-          where: { email, role: { not: Role.SUPER_ADMIN } },
+          where: { email },
           data: { role: Role.SUPER_ADMIN },
         });
       }

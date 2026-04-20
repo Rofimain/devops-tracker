@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { canWriteAppData } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/topbar";
 import Link from "next/link";
@@ -8,6 +10,9 @@ import { Edit, Plus, ExternalLink } from "lucide-react";
 import { ProjectDeleteButton } from "./project-delete-button";
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
+  const session = await auth();
+  const canWrite = canWriteAppData(session?.user?.role);
+
   const project = await prisma.project.findUnique({
     where: { slug: params.id },
     include: {
@@ -29,9 +34,13 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         action={
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <span className={`badge ${statusBadgeClass(project.status)}`}>{statusLabel(project.status)}</span>
-            <Link href={`/projects/${project.slug}/edit`} className="btn btn-sm"><Edit size={12} /> Edit</Link>
-            <Link href={`/projects/${project.slug}/tools/add`} className="btn btn-primary btn-sm"><Plus size={12} /> Add Tool</Link>
-            <ProjectDeleteButton projectId={project.id} projectName={project.name} />
+            {canWrite ? (
+              <>
+                <Link href={`/projects/${project.slug}/edit`} className="btn btn-sm"><Edit size={12} /> Edit</Link>
+                <Link href={`/projects/${project.slug}/tools/add`} className="btn btn-primary btn-sm"><Plus size={12} /> Add Tool</Link>
+                <ProjectDeleteButton projectId={project.id} projectName={project.name} />
+              </>
+            ) : null}
           </div>
         }
       />
@@ -54,7 +63,7 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         </div>
 
         {/* Tabs */}
-        <ProjectDetailTabs project={project as any} />
+        <ProjectDetailTabs project={project as any} canWrite={canWrite} />
 
       </div>
     </>

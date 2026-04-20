@@ -1,3 +1,5 @@
+import { auth } from "@/lib/auth";
+import { canWriteAppData } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/topbar";
 import Link from "next/link";
@@ -5,6 +7,9 @@ import { timeAgo } from "@/lib/utils";
 import { Plus, FileText, Search } from "lucide-react";
 
 export default async function DocsPage({ searchParams }: { searchParams: { category?: string; q?: string } }) {
+  const session = await auth();
+  const canWrite = canWriteAppData(session?.user?.role);
+
   const where: any = {};
   if (searchParams.category && searchParams.category !== "ALL") where.category = searchParams.category;
   if (searchParams.q) where.OR = [
@@ -21,7 +26,7 @@ export default async function DocsPage({ searchParams }: { searchParams: { categ
     <>
       <Topbar
         title="Documentation"
-        action={<Link href="/docs/new" className="btn btn-primary"><Plus size={13} /> New Doc</Link>}
+        action={canWrite ? <Link href="/docs/new" className="btn btn-primary"><Plus size={13} /> New Doc</Link> : undefined}
       />
       <div className="app-content">
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
@@ -41,7 +46,7 @@ export default async function DocsPage({ searchParams }: { searchParams: { categ
             <div className="empty-state" style={{ padding: "48px 0" }}>
               <FileText size={32} />
               <div>Belum ada dokumentasi.</div>
-              <Link href="/docs/new" className="btn btn-primary btn-sm">Tulis Dokumentasi Pertama</Link>
+              {canWrite ? <Link href="/docs/new" className="btn btn-primary btn-sm">Tulis Dokumentasi Pertama</Link> : null}
             </div>
           ) : (
             <div className="table-wrap">

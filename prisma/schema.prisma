@@ -8,18 +8,29 @@ datasource db {
 }
 
 model User {
-  id             String         @id @default(cuid())
-  name           String?
-  email          String         @unique
-  emailVerified  DateTime?
-  image          String?
-  role           Role           @default(MEMBER)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  accounts       Account[]
-  activities     Activity[]
-  sessions       Session[]
-  logbookEntries LogbookEntry[]
+  id              String            @id @default(cuid())
+  name            String?
+  email           String            @unique
+  emailVerified   DateTime?
+  image           String?
+  role            Role              @default(MEMBER)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  accounts        Account[]
+  activities      Activity[]
+  sessions        Session[]
+  logbookEntries  LogbookEntry[]
+  invitesCreated  LoginAllowlist[]
+}
+
+/// Email yang diizinkan login (undangan Super Admin). Jika tabel kosong, cukup domain @ALLOWED_EMAIL_DOMAIN.
+model LoginAllowlist {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  note        String?
+  invitedById String?
+  invitedBy   User?    @relation(fields: [invitedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
 }
 
 model Account {

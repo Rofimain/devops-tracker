@@ -74,6 +74,7 @@ export async function ensureProjectSchema(): Promise<void> {
     await ensureProjectInfraTableAndRows();
     await ensureLogbookTable();
     await ensureCloudflareTables();
+    await ensureLoginAllowlistTable();
   } catch (e) {
     console.error("[ensureProjectSchema] gagal menyelaraskan DB:", e);
   }
@@ -110,6 +111,27 @@ CREATE TABLE IF NOT EXISTS "LogbookEntry" (
   await prisma.$executeRawUnsafe(`
 ALTER TABLE "LogbookEntry" ADD CONSTRAINT "LogbookEntry_userId_fkey"
   FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+`);
+}
+
+async function ensureLoginAllowlistTable(): Promise<void> {
+  await prisma.$executeRawUnsafe(`
+CREATE TABLE IF NOT EXISTS "LoginAllowlist" (
+    "id" TEXT NOT NULL,
+    "email" TEXT NOT NULL,
+    "note" TEXT,
+    "invitedById" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "LoginAllowlist_pkey" PRIMARY KEY ("id")
+);
+`);
+  await prisma.$executeRawUnsafe(
+    `CREATE UNIQUE INDEX IF NOT EXISTS "LoginAllowlist_email_key" ON "LoginAllowlist"("email");`
+  );
+  await prisma.$executeRawUnsafe(`ALTER TABLE "LoginAllowlist" DROP CONSTRAINT IF EXISTS "LoginAllowlist_invitedById_fkey";`);
+  await prisma.$executeRawUnsafe(`
+ALTER TABLE "LoginAllowlist" ADD CONSTRAINT "LoginAllowlist_invitedById_fkey"
+  FOREIGN KEY ("invitedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 `);
 }
 

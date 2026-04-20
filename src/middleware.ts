@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { isMemberWriteOrAdminPath } from "@/lib/member-paths";
 
 function secret() {
   return process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
@@ -58,6 +59,12 @@ export async function middleware(request: NextRequest) {
     }
     if (path.startsWith("/api/cloudflare") || path.startsWith("/api/purge-presets")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (path.startsWith("/api/") && request.method !== "GET" && request.method !== "HEAD") {
+      return NextResponse.json({ error: "Forbidden: akun hanya baca" }, { status: 403 });
+    }
+    if (isMemberWriteOrAdminPath(path)) {
+      return NextResponse.redirect(new URL("/", request.url));
     }
   }
 

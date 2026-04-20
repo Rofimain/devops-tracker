@@ -5,7 +5,7 @@ import Link from "next/link";
 import { TOOL_CATEGORY_COLORS, timeAgo, statusBadgeClass, statusLabel, webBasedBadgeClass } from "@/lib/utils";
 import { FileText, Plus, ExternalLink } from "lucide-react";
 
-export function ProjectDetailTabs({ project }: { project: any }) {
+export function ProjectDetailTabs({ project, canWrite = true }: { project: any; canWrite?: boolean }) {
   const [tab, setTab] = useState("overview");
 
   const tabs = [
@@ -166,16 +166,29 @@ export function ProjectDetailTabs({ project }: { project: any }) {
         <div className="card">
           <div className="card-header">
             <span className="card-title">Tools yang Digunakan</span>
-            <Link href={`/projects/${project.slug}/tools/add`} className="btn btn-primary btn-sm"><Plus size={12} /> Add Tool</Link>
+            {canWrite ? (
+              <Link href={`/projects/${project.slug}/tools/add`} className="btn btn-primary btn-sm"><Plus size={12} /> Add Tool</Link>
+            ) : null}
           </div>
           <div className="table-wrap">
             <table className="data-table">
-              <thead><tr><th>Tool</th><th>Category</th><th>Version</th><th>Config Notes</th><th>Docs</th><th></th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Tool</th>
+                  <th>Category</th>
+                  <th>Version</th>
+                  <th>Config Notes</th>
+                  <th>Docs</th>
+                  {canWrite ? <th /> : null}
+                </tr>
+              </thead>
               <tbody>
                 {project.tools.length === 0 ? (
-                  <tr><td colSpan={6} style={{ textAlign: "center", padding: "32px 0", color: "var(--text-muted)" }}>
-                    Belum ada tool. <Link href={`/projects/${project.slug}/tools/add`} style={{ color: "var(--accent)" }}>Tambah tool →</Link>
-                  </td></tr>
+                  <tr>
+                    <td colSpan={canWrite ? 6 : 5} style={{ textAlign: "center", padding: "32px 0", color: "var(--text-muted)" }}>
+                      Belum ada tool.{canWrite ? <> <Link href={`/projects/${project.slug}/tools/add`} style={{ color: "var(--accent)" }}>Tambah tool →</Link></> : null}
+                    </td>
+                  </tr>
                 ) : (
                   project.tools.map((pt: any) => (
                     <tr key={pt.id}>
@@ -186,9 +199,11 @@ export function ProjectDetailTabs({ project }: { project: any }) {
                       <td>
                         {pt.tool.docsUrl ? <a href={pt.tool.docsUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", fontSize: 11, display: "flex", alignItems: "center", gap: 3 }}>docs <ExternalLink size={10} /></a> : "—"}
                       </td>
-                      <td>
-                        <button className="btn btn-sm" style={{ fontSize: 10 }} onClick={() => { if (confirm("Hapus tool ini?")) fetch(`/api/projects/${project.id}/tools/${pt.id}`, { method: "DELETE" }).then(() => window.location.reload()); }}>Hapus</button>
-                      </td>
+                      {canWrite ? (
+                        <td>
+                          <button className="btn btn-sm" style={{ fontSize: 10 }} onClick={() => { if (confirm("Hapus tool ini?")) fetch(`/api/projects/${project.id}/tools/${pt.id}`, { method: "DELETE" }).then(() => window.location.reload()); }}>Hapus</button>
+                        </td>
+                      ) : null}
                     </tr>
                   ))
                 )}
@@ -203,10 +218,16 @@ export function ProjectDetailTabs({ project }: { project: any }) {
         <div className="card">
           <div className="card-header">
             <span className="card-title">Dokumentasi Project</span>
-            <Link href={`/docs/new?projectId=${project.id}`} className="btn btn-primary btn-sm"><Plus size={12} /> New Doc</Link>
+            {canWrite ? (
+              <Link href={`/docs/new?projectId=${project.id}`} className="btn btn-primary btn-sm"><Plus size={12} /> New Doc</Link>
+            ) : null}
           </div>
           {project.docs.length === 0 ? (
-            <div className="empty-state"><FileText size={32} /><div>Belum ada dokumentasi.</div><Link href={`/docs/new?projectId=${project.id}`} className="btn btn-primary btn-sm">Tambah Dok</Link></div>
+            <div className="empty-state">
+              <FileText size={32} />
+              <div>Belum ada dokumentasi.</div>
+              {canWrite ? <Link href={`/docs/new?projectId=${project.id}`} className="btn btn-primary btn-sm">Tambah Dok</Link> : null}
+            </div>
           ) : (
             project.docs.map((doc: any) => (
               <Link key={doc.id} href={`/docs/${doc.id}`} className="doc-item" style={{ display: "flex", textDecoration: "none" }}>

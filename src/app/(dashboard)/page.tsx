@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { canWriteAppData } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/topbar";
 import Link from "next/link";
@@ -7,6 +8,7 @@ import { Plus } from "lucide-react";
 
 export default async function DashboardPage() {
   const session = await auth();
+  const canWrite = canWriteAppData(session?.user?.role);
 
   const [projectCount, toolCount, docCount, userCount, projects, activities, infraAgg] =
     await Promise.all([
@@ -79,9 +81,11 @@ export default async function DashboardPage() {
       <Topbar
         title="Dashboard"
         action={
-          <Link href="/projects/new" className="btn btn-primary">
-            <Plus size={13} /> New Project
-          </Link>
+          canWrite ? (
+            <Link href="/projects/new" className="btn btn-primary">
+              <Plus size={13} /> New Project
+            </Link>
+          ) : undefined
         }
       />
       <div className="app-content">
@@ -141,7 +145,7 @@ export default async function DashboardPage() {
                 </thead>
                 <tbody>
                   {projects.length === 0 ? (
-                    <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--text-muted)", padding: "24px 0" }}>Belum ada project. <Link href="/projects/new" style={{ color: "var(--accent)" }}>Buat project pertama →</Link></td></tr>
+                    <tr><td colSpan={4} style={{ textAlign: "center", color: "var(--text-muted)", padding: "24px 0" }}>Belum ada project.{canWrite ? <> <Link href="/projects/new" style={{ color: "var(--accent)" }}>Buat project pertama →</Link></> : null}</td></tr>
                   ) : (
                     projects.map((p) => (
                       <tr key={p.id}>
@@ -241,10 +245,10 @@ export default async function DashboardPage() {
               <div>
                 <div className="sec-label">Quick Links</div>
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <Link href="/projects/new" className="btn btn-sm" style={{ justifyContent: "flex-start" }}>+ Tambah Project</Link>
+                  {canWrite ? <Link href="/projects/new" className="btn btn-sm" style={{ justifyContent: "flex-start" }}>+ Tambah Project</Link> : null}
                   <Link href="/tools" className="btn btn-sm" style={{ justifyContent: "flex-start" }}>🔧 Tools Catalog</Link>
                   <Link href="/docs" className="btn btn-sm" style={{ justifyContent: "flex-start" }}>📄 Documentation</Link>
-                  <Link href="/admin/users" className="btn btn-sm" style={{ justifyContent: "flex-start" }}>👥 Manage Users</Link>
+                  {canWrite ? <Link href="/admin/users" className="btn btn-sm" style={{ justifyContent: "flex-start" }}>👥 Manage Users</Link> : null}
                 </div>
               </div>
             </div>

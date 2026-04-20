@@ -1,3 +1,5 @@
+import { auth } from "@/lib/auth";
+import { canWriteAppData } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/topbar";
 import Link from "next/link";
@@ -10,6 +12,9 @@ export default async function ProjectsPage({
 }: {
   searchParams: { status?: string; q?: string };
 }) {
+  const session = await auth();
+  const canWrite = canWriteAppData(session?.user?.role);
+
   const where: any = {};
   if (searchParams.status && searchParams.status !== "ALL") where.status = searchParams.status;
   if (searchParams.q) {
@@ -51,9 +56,11 @@ export default async function ProjectsPage({
       <Topbar
         title="Projects"
         action={
-          <Link href="/projects/new" className="btn btn-primary">
-            <Plus size={13} /> Add Project
-          </Link>
+          canWrite ? (
+            <Link href="/projects/new" className="btn btn-primary">
+              <Plus size={13} /> Add Project
+            </Link>
+          ) : undefined
         }
       />
       <div className="app-content">
@@ -91,8 +98,7 @@ export default async function ProjectsPage({
                 {projects.length === 0 ? (
                   <tr>
                     <td colSpan={17} style={{ textAlign: "center", padding: "40px 0", color: "var(--text-muted)" }}>
-                      Belum ada project.{" "}
-                      <Link href="/projects/new" style={{ color: "var(--accent)" }}>Tambah project pertama →</Link>
+                      Belum ada project.{canWrite ? <> <Link href="/projects/new" style={{ color: "var(--accent)" }}>Tambah project pertama →</Link></> : null}
                     </td>
                   </tr>
                 ) : (

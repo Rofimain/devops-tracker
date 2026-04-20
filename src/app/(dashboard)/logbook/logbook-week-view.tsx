@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { BookMarked, ChevronLeft, ChevronRight, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { LOGBOOK_CATEGORIES, type IsoWeek, type LogbookCategoryId } from "@/lib/logbook-week";
 
 export type LogbookEntryRow = {
@@ -47,6 +48,7 @@ export function LogbookWeekView({
   isCurrentWeek,
   currentUserId,
   isAdmin,
+  canMutate = true,
 }: {
   initialEntries: LogbookEntryRow[];
   week: IsoWeek;
@@ -57,6 +59,7 @@ export function LogbookWeekView({
   isCurrentWeek: boolean;
   currentUserId: string;
   isAdmin: boolean;
+  canMutate?: boolean;
 }) {
   const router = useRouter();
   const [entries, setEntries] = useState(initialEntries);
@@ -169,7 +172,7 @@ export function LogbookWeekView({
   };
 
   return (
-    <div className="logbook-shell">
+    <div className={cn("logbook-shell", !canMutate && "logbook-readonly")}>
       <header className="logbook-hero">
         <div className="logbook-hero-inner">
           <div style={{ display: "flex", alignItems: "flex-start", gap: 14, flexWrap: "wrap" }}>
@@ -245,11 +248,13 @@ export function LogbookWeekView({
         <div className="logbook-entry-list">
           {entries.length === 0 ? (
             <div className="logbook-empty">
-              Minggu ini masih kosong. Gunakan formulir di kanan untuk menambahkan entri pertama — tim Anda akan melihatnya di sini.
+              {canMutate
+                ? "Minggu ini masih kosong. Gunakan formulir di kanan untuk menambahkan entri pertama — tim Anda akan melihatnya di sini."
+                : "Minggu ini belum ada entri. Akun Anda hanya dapat melihat logbook."}
             </div>
           ) : (
             entries.map((entry) => {
-              const canEdit = entry.userId === currentUserId || isAdmin;
+              const canEdit = canMutate && (entry.userId === currentUserId || isAdmin);
               return (
                 <article key={entry.id} className="logbook-entry">
                   <div style={{ background: railColor(entry.category) }} aria-hidden />
@@ -295,7 +300,16 @@ export function LogbookWeekView({
         </div>
 
         <aside className="logbook-aside">
-          {editing ? (
+          {!canMutate ? (
+            <div className="card logbook-sticky">
+              <div className="card-header">
+                <span className="card-title">Mode baca</span>
+              </div>
+              <div className="card-body" style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.5 }}>
+                Role Member hanya dapat melihat logbook. Menambah atau mengubah entri hanya untuk Admin / Super Admin.
+              </div>
+            </div>
+          ) : editing ? (
             <form onSubmit={saveEdit} className="card logbook-sticky">
               <div className="card-header">
                 <span className="card-title">Edit entri</span>

@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { auth } from "@/lib/auth";
+import { canWriteAppData } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/topbar";
 import Link from "next/link";
@@ -7,6 +9,9 @@ import { Edit } from "lucide-react";
 import { DocDeleteButton } from "./doc-delete-button";
 
 export default async function DocDetailPage({ params }: { params: { id: string } }) {
+  const session = await auth();
+  const canWrite = canWriteAppData(session?.user?.role);
+
   const doc = await prisma.doc.findUnique({ where: { id: params.id }, include: { project: { select: { name: true, slug: true } } } });
   if (!doc) notFound();
 
@@ -16,10 +21,12 @@ export default async function DocDetailPage({ params }: { params: { id: string }
         title={doc.title}
         breadcrumb="Documentation"
         action={
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <Link href={`/docs/${doc.id}/edit`} className="btn btn-sm"><Edit size={12} /> Edit</Link>
-            <DocDeleteButton docId={doc.id} title={doc.title} />
-          </div>
+          canWrite ? (
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              <Link href={`/docs/${doc.id}/edit`} className="btn btn-sm"><Edit size={12} /> Edit</Link>
+              <DocDeleteButton docId={doc.id} title={doc.title} />
+            </div>
+          ) : undefined
         }
       />
       <div className="app-content">

@@ -319,6 +319,9 @@ table.data-table .col-infra { background: rgba(37, 99, 235, 0.05); }
   gap: 20px;
   align-items: start;
 }
+.logbook-readonly .logbook-layout {
+  grid-template-columns: 1fr;
+}
 @media (max-width: 900px) {
   .logbook-layout { grid-template-columns: 1fr; }
   .logbook-aside .logbook-sticky { position: relative !important; top: 0 !important; }
