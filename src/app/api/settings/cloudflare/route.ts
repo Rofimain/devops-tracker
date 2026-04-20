@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth, isAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { recordActivity } from "@/lib/activity-log";
 
 const putSchema = z.object({
   zoneId: z.string().max(200).optional(),
@@ -47,6 +48,11 @@ export async function PUT(req: NextRequest) {
     });
 
     const cfg = await prisma.cloudflareAppConfig.findUnique({ where: { id: "default" } });
+    await recordActivity(req, {
+      action: "SETTINGS_CLOUDFLARE",
+      details: `Konfigurasi Cloudflare diperbarui (zone: ${zoneId ? "diisi" : "kosong"}, token: ${apiToken !== undefined && apiToken.length > 0 ? "diperbarui" : "tidak diubah"})`,
+      userId: session.user.id,
+    });
     return NextResponse.json({
       zoneId: cfg?.zoneId ?? "",
       hasToken: Boolean(cfg?.apiToken?.trim()),

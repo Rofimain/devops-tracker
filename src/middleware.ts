@@ -47,6 +47,9 @@ export async function middleware(request: NextRequest) {
     if (path.startsWith("/api/purge-presets") && request.method === "GET") {
       return NextResponse.next();
     }
+    if (path === "/api/audit/session" && request.method === "POST") {
+      return NextResponse.next();
+    }
     if (path.startsWith("/api/")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -60,7 +63,12 @@ export async function middleware(request: NextRequest) {
     if (path.startsWith("/api/cloudflare") || path.startsWith("/api/purge-presets")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    if (path.startsWith("/api/") && request.method !== "GET" && request.method !== "HEAD") {
+    if (
+      path.startsWith("/api/") &&
+      request.method !== "GET" &&
+      request.method !== "HEAD" &&
+      !(path === "/api/audit/session" && request.method === "POST")
+    ) {
       return NextResponse.json({ error: "Forbidden: akun hanya baca" }, { status: 403 });
     }
     if (isMemberWriteOrAdminPath(path)) {

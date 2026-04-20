@@ -76,6 +76,8 @@ export async function ensureProjectSchema(): Promise<void> {
     await ensureLogbookOccurredAtColumn();
     await ensureCloudflareTables();
     await ensureLoginAllowlistTable();
+    await ensureActivityAuditColumns();
+    await ensureLoginAllowlistInvitedRoleColumn();
   } catch (e) {
     console.error("[ensureProjectSchema] gagal menyelaraskan DB:", e);
   }
@@ -148,6 +150,7 @@ CREATE TABLE IF NOT EXISTS "LoginAllowlist" (
     "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "note" TEXT,
+    "invitedRole" "Role" NOT NULL DEFAULT 'MEMBER',
     "invitedById" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "LoginAllowlist_pkey" PRIMARY KEY ("id")
@@ -161,6 +164,56 @@ CREATE TABLE IF NOT EXISTS "LoginAllowlist" (
 ALTER TABLE "LoginAllowlist" ADD CONSTRAINT "LoginAllowlist_invitedById_fkey"
   FOREIGN KEY ("invitedById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 `);
+}
+
+async function ensureActivityAuditColumns(): Promise<void> {
+  const tableExistsRows = await prisma.$queryRaw<[{ exists: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'Activity'
+    ) AS "exists"
+  `;
+  if (!Boolean(tableExistsRows[0]?.exists)) return;
+
+  const ipRows = await prisma.$queryRaw<[{ exists: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'Activity' AND column_name = 'ipAddress'
+    ) AS "exists"
+  `;
+  if (!Boolean(ipRows[0]?.exists)) {
+    await prisma.$executeRawUnsafe(`ALTER TABLE "Activity" ADD COLUMN "ipAddress" VARCHAR(64);`);
+  }
+  const uaRows = await prisma.$queryRaw<[{ exists: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'Activity' AND column_name = 'userAgent'
+    ) AS "exists"
+  `;
+  if (!Boolean(uaRows[0]?.exists)) {
+    await prisma.$executeRawUnsafe(`ALTER TABLE "Activity" ADD COLUMN "userAgent" VARCHAR(512);`);
+  }
+  await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "Activity_createdAt_idx" ON "Activity"("createdAt");`);
+}
+
+async function ensureLoginAllowlistInvitedRoleColumn(): Promise<void> {
+  const tableExistsRows = await prisma.$queryRaw<[{ exists: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'LoginAllowlist'
+    ) AS "exists"
+  `;
+  if (!Boolean(tableExistsRows[0]?.exists)) return;
+
+  const colRows = await prisma.$queryRaw<[{ exists: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'LoginAllowlist' AND column_name = 'invitedRole'
+    ) AS "exists"
+  `;
+  if (Boolean(colRows[0]?.exists)) return;
+
+  await prisma.$executeRawUnsafe(`ALTER TABLE "LoginAllowlist" ADD COLUMN "invitedRole" "Role" NOT NULL DEFAULT 'MEMBER';`);
 }
 
 async function ensureCloudflareTables(): Promise<void> {

@@ -229,8 +229,7 @@ export function LogbookWeekView({
                 DevOps logbook
               </h2>
               <p style={{ margin: "8px 0 0", fontSize: 13, lineHeight: 1.55, color: "var(--text-secondary)", maxWidth: 520 }}>
-                Satu halaman untuk semua catatan mingguan: rilis, insiden, perubahan infrastruktur, dan hal penting lainnya — mudah
-                ditambah dan dibaca ulang.
+                Satu halaman untuk semua catatan mingguan: rilis, insiden, perubahan infrastruktur, dan hal penting lainnya.
               </p>
             </div>
           </div>
@@ -442,7 +441,6 @@ export function LogbookWeekView({
                     <input className="form-input" type="date" value={actDate} onChange={(e) => setActDate(e.target.value)} style={{ flex: "1 1 140px" }} />
                     <input className="form-input" type="time" value={actTime} onChange={(e) => setActTime(e.target.value)} style={{ flex: "0 1 120px" }} />
                   </div>
-                  <div style={{ fontSize: 10, color: "var(--text-hint)", marginTop: 4 }}>Kapan kejadian ini benar-benar terjadi (boleh di masa lalu).</div>
                 </div>
                 <div className="form-group" style={{ margin: 0 }}>
                   <label className="form-label">Judul singkat *</label>

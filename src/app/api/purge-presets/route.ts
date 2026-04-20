@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth, isAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { recordActivity } from "@/lib/activity-log";
 import { canPurgeCloudflare } from "@/lib/roles";
 
 const postSchema = z.object({
@@ -47,6 +48,11 @@ export async function POST(req: NextRequest) {
         bodyJson: parsed.data.bodyJson.trim(),
         sortOrder: parsed.data.sortOrder ?? 0,
       },
+    });
+    await recordActivity(req, {
+      action: "PURGE_PRESET_CREATE",
+      details: `Preset purge "${preset.name}" dibuat`,
+      userId: session.user.id,
     });
     return NextResponse.json(preset, { status: 201 });
   } catch (e: any) {

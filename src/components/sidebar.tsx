@@ -37,7 +37,15 @@ const navItems: NavItem[] = [
   { kind: "link", label: "Settings", href: "/settings", icon: Settings, visible: (r) => isSuperAdminRole(r) },
 ];
 
-export function Sidebar({ projectCount = 0 }: { projectCount?: number }) {
+export function Sidebar({
+  projectCount = 0,
+  className,
+  onNavigate,
+}: {
+  projectCount?: number;
+  className?: string;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const role = session?.user?.role;
@@ -60,7 +68,7 @@ export function Sidebar({ projectCount = 0 }: { projectCount?: number }) {
   const filtered = navItems.filter((item) => item.visible(role));
 
   return (
-    <aside className="app-sidebar">
+    <aside className={cn("app-sidebar", className)}>
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">
           <Server size={16} color="white" />
@@ -82,7 +90,12 @@ export function Sidebar({ projectCount = 0 }: { projectCount?: number }) {
           }
           const Icon = item.icon;
           return (
-            <Link key={item.href} href={item.href} className={cn("sidebar-item", isActive(item.href) && "active")}>
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn("sidebar-item", isActive(item.href) && "active")}
+              onClick={() => onNavigate?.()}
+            >
               <Icon size={14} style={{ opacity: 0.8, flexShrink: 0 }} />
               {item.label}
               {item.countKey === "projects" && projectCount > 0 && <span className="count">{projectCount}</span>}

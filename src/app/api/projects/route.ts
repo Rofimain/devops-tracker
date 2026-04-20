@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { recordActivity } from "@/lib/activity-log";
 import { normalizeCostPerMonth, slugify } from "@/lib/utils";
 import { parseInfrasFromBody } from "@/lib/project-infra";
 
@@ -83,8 +84,11 @@ export async function POST(req: NextRequest) {
     });
     if (!project) return NextResponse.json({ error: "Create failed" }, { status: 500 });
 
-    await prisma.activity.create({
-      data: { action: "CREATE", details: `Project "${project.name}" dibuat`, userId: session.user.id, projectId: project.id },
+    await recordActivity(req, {
+      action: "CREATE",
+      details: `Project "${project.name}" dibuat`,
+      userId: session.user.id,
+      projectId: project.id,
     });
     return NextResponse.json(project, { status: 201 });
   } catch (e: any) {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { recordActivity } from "@/lib/activity-log";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await auth();
@@ -11,8 +12,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       data: { projectId: params.id, toolId, version: version || null, notes: notes || null },
       include: { tool: true },
     });
-    await prisma.activity.create({
-      data: { action: "ADD_TOOL", details: `Tool "${pt.tool.name}" ditambahkan`, userId: session.user.id, projectId: params.id },
+    await recordActivity(req, {
+      action: "ADD_TOOL",
+      details: `Tool "${pt.tool.name}" ditambahkan ke project`,
+      userId: session.user.id,
+      projectId: params.id,
     });
     return NextResponse.json(pt, { status: 201 });
   } catch (e: any) {

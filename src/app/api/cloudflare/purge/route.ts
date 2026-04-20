@@ -3,6 +3,13 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canPurgeCloudflare } from "@/lib/roles";
 import { sanitizePurgeBody } from "@/lib/cloudflare-purge";
+import { recordActivity } from "@/lib/activity-log";
+
+function purgeSummary(body: Record<string, string[]>) {
+  return Object.entries(body)
+    .map(([k, v]) => `${k}:${v.length}`)
+    .join(", ");
+}
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -49,9 +56,19 @@ export async function POST(req: NextRequest) {
 
     if (!res.ok || !data.success) {
       const msg = data.errors?.map((e) => e.message).join("; ") || data.messages?.join("; ") || res.statusText;
+      await recordActivity(req, {
+        action: "CLOUDFLARE_PURGE_FAIL",
+        details: `Purge gagal (${purgeSummary(body)}): ${msg || res.statusText}`.slice(0, 500),
+        userId: session.user.id,
+      });
       return NextResponse.json({ ok: false, status: res.status, message: msg || "Cloudflare error", body: text }, { status: 502 });
     }
 
+    await recordActivity(req, {
+      action: "CLOUDFLARE_PURGE",
+      details: `Purge cache OK (${purgeSummary(body)})`,
+      userId: session.user.id,
+    });
     return NextResponse.json({ ok: true, status: res.status, body: text });
   } catch (e: any) {
     return NextResponse.json({ ok: false, message: e.message ?? "Request failed" }, { status: 500 });

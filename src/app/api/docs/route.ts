@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { recordActivity } from "@/lib/activity-log";
 
 export async function GET() {
   const session = await auth();
@@ -17,8 +18,11 @@ export async function POST(req: NextRequest) {
     const doc = await prisma.doc.create({
       data: { title: body.title, content: body.content, category: body.category || null, tags: body.tags || [], projectId: body.projectId || null },
     });
-    await prisma.activity.create({
-      data: { action: "ADD_DOC", details: `Dokumen "${doc.title}" ditambahkan`, userId: session.user.id, projectId: body.projectId || null },
+    await recordActivity(req, {
+      action: "ADD_DOC",
+      details: `Dokumen "${doc.title}" ditambahkan`,
+      userId: session.user.id,
+      projectId: body.projectId || null,
     });
     return NextResponse.json(doc, { status: 201 });
   } catch (e: any) {

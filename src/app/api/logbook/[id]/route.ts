@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth, isAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { recordActivity } from "@/lib/activity-log";
 
 const patchSchema = z.object({
   category: z.enum(["deployment", "change", "incident", "maintenance", "note"]).optional(),
@@ -35,13 +36,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       },
       include: { user: { select: { id: true, name: true, email: true, image: true } } },
     });
+    await recordActivity(req, {
+      action: "LOGBOOK_UPDATE",
+      details: `Logbook diubah: "${entry.title}"`,
+      userId: session.user.id,
+    });
     return NextResponse.json(entry);
   } catch (e: any) {
     return NextResponse.json({ error: e.message ?? "Error" }, { status: 500 });
   }
 }
 
-export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -51,6 +57,11 @@ export async function DELETE(_: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  await recordActivity(req, {
+    action: "LOGBOOK_DELETE",
+    details: `Logbook dihapus: "${existing.title}"`,
+    userId: session.user.id,
+  });
   await prisma.logbookEntry.delete({ where: { id: params.id } });
   return NextResponse.json({ success: true });
 }

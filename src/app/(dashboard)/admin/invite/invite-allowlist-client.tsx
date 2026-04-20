@@ -5,10 +5,17 @@ import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { timeAgo } from "@/lib/utils";
 
+const ROLES = [
+  { value: "MEMBER", label: "Member (baca)" },
+  { value: "ADMIN", label: "Admin" },
+  { value: "OPERATOR", label: "Operator (purge)" },
+] as const;
+
 type Row = {
   id: string;
   email: string;
   note: string | null;
+  invitedRole: string;
   createdAt: string;
   invitedBy: { name: string | null; email: string } | null;
 };
@@ -18,6 +25,7 @@ export function InviteAllowlistClient({ initialRows, domain }: { initialRows: Ro
   const [rows, setRows] = useState(initialRows);
   const [email, setEmail] = useState("");
   const [note, setNote] = useState("");
+  const [invitedRole, setInvitedRole] = useState<string>("MEMBER");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -29,7 +37,7 @@ export function InviteAllowlistClient({ initialRows, domain }: { initialRows: Ro
       const res = await fetch("/api/login-allowlist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), note: note.trim() || undefined }),
+        body: JSON.stringify({ email: email.trim(), note: note.trim() || undefined, invitedRole }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -39,6 +47,7 @@ export function InviteAllowlistClient({ initialRows, domain }: { initialRows: Ro
       setRows((r) => [data, ...r]);
       setEmail("");
       setNote("");
+      setInvitedRole("MEMBER");
       router.refresh();
     } catch {
       setErr("Gagal menambah");
@@ -69,6 +78,19 @@ export function InviteAllowlistClient({ initialRows, domain }: { initialRows: Ro
               <input className="form-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={`nama@${domain}`} required />
             </div>
             <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label">Role setelah login</label>
+              <select className="form-select" value={invitedRole} onChange={(e) => setInvitedRole(e.target.value)}>
+                {ROLES.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+              <div style={{ fontSize: 10, color: "var(--text-hint)", marginTop: 4 }}>
+                Super Admin hanya lewat variabel <span className="mono">SUPER_ADMIN_EMAIL</span>, bukan dari undangan.
+              </div>
+            </div>
+            <div className="form-group" style={{ margin: 0, gridColumn: "1 / -1" }}>
               <label className="form-label">Catatan (opsional)</label>
               <input className="form-input" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Divisi / alasan" />
             </div>
@@ -91,6 +113,7 @@ export function InviteAllowlistClient({ initialRows, domain }: { initialRows: Ro
             <thead>
               <tr>
                 <th>Email</th>
+                <th>Role</th>
                 <th>Catatan</th>
                 <th>Diundang oleh</th>
                 <th>Waktu</th>
@@ -100,7 +123,7 @@ export function InviteAllowlistClient({ initialRows, domain }: { initialRows: Ro
             <tbody>
               {rows.length === 0 ? (
                 <tr>
-                  <td colSpan={5} style={{ textAlign: "center", color: "var(--text-muted)", padding: 24 }}>
+                  <td colSpan={6} style={{ textAlign: "center", color: "var(--text-muted)", padding: 24 }}>
                     Kosong — login terbuka untuk semua @{domain}
                   </td>
                 </tr>
@@ -109,6 +132,11 @@ export function InviteAllowlistClient({ initialRows, domain }: { initialRows: Ro
                   <tr key={r.id}>
                     <td className="mono" style={{ fontWeight: 600 }}>
                       {r.email}
+                    </td>
+                    <td>
+                      <span className="badge badge-blue" style={{ fontSize: 10 }}>
+                        {r.invitedRole}
+                      </span>
                     </td>
                     <td style={{ fontSize: 12, color: "var(--text-secondary)" }}>{r.note ?? "—"}</td>
                     <td style={{ fontSize: 12 }}>{r.invitedBy?.name ?? r.invitedBy?.email ?? "—"}</td>

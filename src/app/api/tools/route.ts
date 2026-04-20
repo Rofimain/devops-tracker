@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { recordActivity } from "@/lib/activity-log";
 
 export async function GET() {
   const session = await auth();
@@ -16,6 +17,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const tool = await prisma.tool.create({
       data: { name: body.name, category: body.category, version: body.version || null, description: body.description || null, docsUrl: body.docsUrl || null },
+    });
+    await recordActivity(req, {
+      action: "CREATE_TOOL",
+      details: `Tool katalog "${tool.name}" dibuat`,
+      userId: session.user.id,
     });
     return NextResponse.json(tool, { status: 201 });
   } catch (e: any) {

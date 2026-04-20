@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { recordActivity } from "@/lib/activity-log";
 import { normalizeCostPerMonth } from "@/lib/utils";
 import { parseInfrasFromBody } from "@/lib/project-infra";
 
@@ -94,8 +95,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         docs: { select: { id: true, title: true } },
       },
     });
-    await prisma.activity.create({
-      data: { action: "UPDATE", details: `Project "${project?.name}" diupdate`, userId: session.user.id, projectId: params.id },
+    await recordActivity(req, {
+      action: "UPDATE",
+      details: `Project "${project?.name}" diupdate`,
+      userId: session.user.id,
+      projectId: params.id,
     });
     return NextResponse.json(project);
   } catch (e: any) {
@@ -103,11 +107,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const project = await prisma.project.findUnique({ where: { id: params.id } });
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  await recordActivity(req, {
+    action: "DELETE",
+    details: `Project "${project.name}" dihapus`,
+    userId: session.user.id,
+    projectId: params.id,
+  });
   await prisma.project.delete({ where: { id: params.id } });
   return NextResponse.json({ success: true });
 }

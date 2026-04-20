@@ -29,17 +29,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (!allowed) {
         return "/login?error=InviteOnly";
       }
-      if (normalizeEmail(email) === normalizeEmail(SUPER_ADMIN_EMAIL)) {
-        await prisma.user.updateMany({
-          where: { email },
-          data: { role: Role.SUPER_ADMIN },
-        });
-      }
       return true;
     },
     async jwt({ token, user }) {
-      if (user?.id) {
+      if (user?.id && user.email) {
         token.id = user.id;
+        const norm = normalizeEmail(user.email);
+        if (SUPER_ADMIN_EMAIL.trim() && norm === normalizeEmail(SUPER_ADMIN_EMAIL)) {
+          await prisma.user.update({ where: { id: user.id }, data: { role: Role.SUPER_ADMIN } });
+        } else {
+          const invite = await prisma.loginAllowlist.findUnique({ where: { email: norm } });
+          if (invite) {
+            await prisma.user.update({ where: { id: user.id }, data: { role: invite.invitedRole } });
+          }
+        }
         const dbUser = await prisma.user.findUnique({
           where: { id: user.id },
           select: { role: true },

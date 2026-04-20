@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { recordActivity } from "@/lib/activity-log";
 
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
   const session = await auth();
@@ -27,12 +28,24 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       docsUrl: body.docsUrl || null,
     },
   });
+  await recordActivity(req, {
+    action: "UPDATE_TOOL",
+    details: `Tool katalog "${tool.name}" diubah`,
+    userId: session.user.id,
+  });
   return NextResponse.json(tool);
 }
 
-export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const existing = await prisma.tool.findUnique({ where: { id: params.id } });
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  await recordActivity(req, {
+    action: "DELETE_TOOL",
+    details: `Tool katalog "${existing.name}" dihapus`,
+    userId: session.user.id,
+  });
   await prisma.projectTool.deleteMany({ where: { toolId: params.id } });
   await prisma.tool.delete({ where: { id: params.id } });
   return NextResponse.json({ success: true });

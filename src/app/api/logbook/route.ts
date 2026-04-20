@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { recordActivity } from "@/lib/activity-log";
 import { parseWeekParam } from "@/lib/logbook-week";
 
 const createSchema = z.object({
@@ -51,6 +52,11 @@ export async function POST(req: NextRequest) {
         occurredAt,
       },
       include: { user: { select: { id: true, name: true, email: true, image: true } } },
+    });
+    await recordActivity(req, {
+      action: "LOGBOOK_CREATE",
+      details: `Logbook: "${entry.title}" (W${parsed.data.isoWeek}/${parsed.data.isoYear})`,
+      userId: session.user.id,
     });
     return NextResponse.json(entry, { status: 201 });
   } catch (e: any) {

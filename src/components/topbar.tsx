@@ -9,14 +9,16 @@ interface TopbarProps {
 export function Topbar({ title, breadcrumb, action }: TopbarProps) {
   return (
     <div className="app-topbar">
-      {breadcrumb && (
-        <>
-          <span style={{ color: "var(--text-muted)", fontSize: 12 }}>{breadcrumb}</span>
-          <span style={{ color: "var(--text-hint)", fontSize: 12 }}>/</span>
-        </>
-      )}
-      <h1 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{title}</h1>
-      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px 8px", minWidth: 0, flex: "1 1 120px" }}>
+        {breadcrumb && (
+          <>
+            <span style={{ color: "var(--text-muted)", fontSize: 12 }}>{breadcrumb}</span>
+            <span style={{ color: "var(--text-hint)", fontSize: 12 }}>/</span>
+          </>
+        )}
+        <h1 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", margin: 0, minWidth: 0, wordBreak: "break-word" }}>{title}</h1>
+      </div>
+      <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", flexShrink: 0 }}>
         <ThemeToggle />
         {action}
       </div>

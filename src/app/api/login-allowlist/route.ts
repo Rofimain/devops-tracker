@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { Role } from "@prisma/client";
 import { auth, isSuperAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { normalizeEmail } from "@/lib/login-allowlist";
+import { recordActivity } from "@/lib/activity-log";
+
+const inviteRoleSchema = z.enum(["MEMBER", "ADMIN", "OPERATOR"]);
 
 const postSchema = z.object({
   email: z.string().email(),
   note: z.string().max(500).optional(),
+  invitedRole: inviteRoleSchema.optional(),
 });
 
 export async function GET() {
@@ -35,20 +40,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Email harus @${domain}` }, { status: 400 });
     }
 
+    const invitedRole = parsed.data.invitedRole ?? Role.MEMBER;
     const row = await prisma.loginAllowlist.create({
       data: {
         email,
         note: parsed.data.note?.trim() || null,
+        invitedRole,
         invitedById: session!.user.id,
       },
       include: { invitedBy: { select: { name: true, email: true } } },
     });
-    await prisma.activity.create({
-      data: {
-        action: "INVITE_ALLOWLIST",
-        details: `Email diundang untuk login: ${email}`,
-        userId: session!.user.id,
-      },
+    await recordActivity(req, {
+      action: "INVITE_ALLOWLIST",
+      details: `Undangan login: ${email} (role ${invitedRole})`,
+      userId: session!.user.id,
     });
     return NextResponse.json(row, { status: 201 });
   } catch (e: any) {
