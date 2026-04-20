@@ -16,7 +16,7 @@ export default async function LogbookPage({ searchParams }: { searchParams: { we
   const entries = await prisma.logbookEntry.findMany({
     where: { isoYear: w.isoYear, isoWeek: w.isoWeek },
     include: { user: { select: { id: true, name: true, email: true, image: true } } },
-    orderBy: { createdAt: "desc" },
+    orderBy: { occurredAt: "desc" },
   });
 
   const serialized: LogbookEntryRow[] = entries.map((e) => ({
@@ -25,6 +25,7 @@ export default async function LogbookPage({ searchParams }: { searchParams: { we
     category: e.category,
     title: e.title,
     body: e.body,
+    occurredAt: e.occurredAt.toISOString(),
     createdAt: e.createdAt.toISOString(),
     user: e.user,
   }));

@@ -10,6 +10,8 @@ const createSchema = z.object({
   category: z.enum(["deployment", "change", "incident", "maintenance", "note"]),
   title: z.string().min(1).max(200),
   body: z.string().max(20000),
+  /** ISO 8601 dari tanggal+waktu lokal. Opsional: default sekarang. */
+  occurredAt: z.coerce.date().optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -22,7 +24,7 @@ export async function GET(req: NextRequest) {
   const entries = await prisma.logbookEntry.findMany({
     where: { isoYear, isoWeek },
     include: { user: { select: { id: true, name: true, email: true, image: true } } },
-    orderBy: { createdAt: "desc" },
+    orderBy: { occurredAt: "desc" },
   });
   return NextResponse.json({ isoYear, isoWeek, entries });
 }
@@ -36,6 +38,8 @@ export async function POST(req: NextRequest) {
     const parsed = createSchema.safeParse(json);
     if (!parsed.success) return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
 
+    const occurredAt = parsed.data.occurredAt ?? new Date();
+
     const entry = await prisma.logbookEntry.create({
       data: {
         userId: session.user.id,
@@ -44,6 +48,7 @@ export async function POST(req: NextRequest) {
         category: parsed.data.category,
         title: parsed.data.title.trim(),
         body: parsed.data.body.trim(),
+        occurredAt,
       },
       include: { user: { select: { id: true, name: true, email: true, image: true } } },
     });

@@ -7,6 +7,7 @@ const patchSchema = z.object({
   category: z.enum(["deployment", "change", "incident", "maintenance", "note"]).optional(),
   title: z.string().min(1).max(200).optional(),
   body: z.string().max(20000).optional(),
+  occurredAt: z.coerce.date().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -30,6 +31,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
         ...(data.category != null ? { category: data.category } : {}),
         ...(data.title != null ? { title: data.title.trim() } : {}),
         ...(data.body != null ? { body: data.body.trim() } : {}),
+        ...(data.occurredAt != null && !Number.isNaN(data.occurredAt.getTime()) ? { occurredAt: data.occurredAt } : {}),
       },
       include: { user: { select: { id: true, name: true, email: true, image: true } } },
     });

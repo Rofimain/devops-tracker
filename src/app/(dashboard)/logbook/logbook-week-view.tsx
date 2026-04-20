@@ -14,9 +14,31 @@ export type LogbookEntryRow = {
   category: string;
   title: string;
   body: string;
+  occurredAt: string;
   createdAt: string;
   user: { id: string; name: string | null; email: string; image: string | null };
 };
+
+function formatDateInput(d: Date) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function formatTimeInput(d: Date) {
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
+/** Interpretasi tanggal+waktu di zona waktu browser. */
+function fromDateAndTimeLocal(dateStr: string, timeStr: string): Date {
+  const [y, mo, da] = dateStr.split("-").map((n) => Number(n));
+  const parts = timeStr.split(":");
+  const h = Number(parts[0]);
+  const mi = Number(parts[1] ?? 0);
+  if (!y || !mo || !da || Number.isNaN(h) || Number.isNaN(mi)) return new Date();
+  return new Date(y, mo - 1, da, h, mi, 0, 0);
+}
 
 function railColor(category: string) {
   const c = LOGBOOK_CATEGORIES.find((x) => x.id === category);
@@ -69,7 +91,11 @@ export function LogbookWeekView({
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [category, setCategory] = useState<LogbookCategoryId>("note");
+  const [actDate, setActDate] = useState(() => formatDateInput(new Date()));
+  const [actTime, setActTime] = useState(() => formatTimeInput(new Date()));
   const [editing, setEditing] = useState<LogbookEntryRow | null>(null);
+  const [editActDate, setEditActDate] = useState("");
+  const [editActTime, setEditActTime] = useState("");
 
   useEffect(() => {
     setEntries(initialEntries);
@@ -101,6 +127,7 @@ export function LogbookWeekView({
           category,
           title: title.trim(),
           body: body.trim(),
+          occurredAt: fromDateAndTimeLocal(actDate, actTime).toISOString(),
         }),
       });
       const data = await res.json();
@@ -112,6 +139,9 @@ export function LogbookWeekView({
       setTitle("");
       setBody("");
       setCategory("note");
+      const n = new Date();
+      setActDate(formatDateInput(n));
+      setActTime(formatTimeInput(n));
       refresh();
     } catch {
       setErr("Gagal menyimpan");
@@ -133,6 +163,7 @@ export function LogbookWeekView({
           category: editing.category,
           title: editing.title.trim(),
           body: editing.body.trim(),
+          occurredAt: fromDateAndTimeLocal(editActDate, editActTime).toISOString(),
         }),
       });
       const data = await res.json();
@@ -140,7 +171,9 @@ export function LogbookWeekView({
         setErr(typeof data.error === "string" ? data.error : "Gagal menyimpan");
         return;
       }
-      setEntries((prev) => prev.map((x) => (x.id === data.id ? { ...x, ...data, user: x.user } : x)));
+      setEntries((prev) =>
+        prev.map((x) => (x.id === data.id ? { ...x, ...data, user: x.user, occurredAt: data.occurredAt, createdAt: data.createdAt } : x)),
+      );
       setEditing(null);
       refresh();
     } catch {
@@ -265,22 +298,44 @@ export function LogbookWeekView({
                           {categoryLabel(entry.category)}
                         </span>
                         <h3 style={{ fontSize: 16, fontWeight: 700, margin: "6px 0 0", lineHeight: 1.35 }}>{entry.title}</h3>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 10, fontSize: 11, color: "var(--text-muted)" }}>
-                          {entry.user.image ? (
-                            <Image src={entry.user.image} alt="" width={22} height={22} style={{ borderRadius: "50%" }} />
-                          ) : (
-                            <div className="avatar" style={{ width: 22, height: 22, fontSize: 9 }}>
-                              {(entry.user.name ?? entry.user.email).slice(0, 2).toUpperCase()}
-                            </div>
-                          )}
-                          <span style={{ fontWeight: 600, color: "var(--text-secondary)" }}>{entry.user.name ?? entry.user.email}</span>
-                          <span aria-hidden>·</span>
-                          <time dateTime={entry.createdAt}>{new Date(entry.createdAt).toLocaleString()}</time>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 10, fontSize: 11, color: "var(--text-muted)" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                            {entry.user.image ? (
+                              <Image src={entry.user.image} alt="" width={22} height={22} style={{ borderRadius: "50%" }} />
+                            ) : (
+                              <div className="avatar" style={{ width: 22, height: 22, fontSize: 9 }}>
+                                {(entry.user.name ?? entry.user.email).slice(0, 2).toUpperCase()}
+                              </div>
+                            )}
+                            <span style={{ fontWeight: 600, color: "var(--text-secondary)" }}>{entry.user.name ?? entry.user.email}</span>
+                          </div>
+                          <div>
+                            <span style={{ color: "var(--text-hint)" }}>Waktu kegiatan: </span>
+                            <time dateTime={entry.occurredAt} style={{ fontWeight: 600, color: "var(--text-secondary)" }}>
+                              {new Date(entry.occurredAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}
+                            </time>
+                            {Math.abs(new Date(entry.createdAt).getTime() - new Date(entry.occurredAt).getTime()) > 60_000 ? (
+                              <span style={{ display: "block", marginTop: 2, fontSize: 10, color: "var(--text-hint)" }}>
+                                Entri dicatat: {new Date(entry.createdAt).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })}
+                              </span>
+                            ) : null}
+                          </div>
                         </div>
                       </div>
                       {canEdit && (
                         <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
-                          <button type="button" className="btn btn-sm" disabled={busy} onClick={() => setEditing(entry)} title="Edit">
+                          <button
+                            type="button"
+                            className="btn btn-sm"
+                            disabled={busy}
+                            onClick={() => {
+                              const d = new Date(entry.occurredAt);
+                              setEditActDate(formatDateInput(d));
+                              setEditActTime(formatTimeInput(d));
+                              setEditing(entry);
+                            }}
+                            title="Edit"
+                          >
                             <Pencil size={14} />
                           </button>
                           <button type="button" className="btn btn-sm btn-danger" disabled={busy} onClick={() => remove(entry.id)} title="Hapus">
@@ -333,6 +388,13 @@ export function LogbookWeekView({
                   </select>
                 </div>
                 <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">Waktu kegiatan</label>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <input className="form-input" type="date" value={editActDate} onChange={(e) => setEditActDate(e.target.value)} style={{ flex: "1 1 140px" }} />
+                    <input className="form-input" type="time" value={editActTime} onChange={(e) => setEditActTime(e.target.value)} style={{ flex: "0 1 120px" }} />
+                  </div>
+                </div>
+                <div className="form-group" style={{ margin: 0 }}>
                   <label className="form-label">Judul</label>
                   <input className="form-input" value={editing.title} onChange={(e) => setEditing({ ...editing, title: e.target.value })} />
                 </div>
@@ -373,6 +435,14 @@ export function LogbookWeekView({
                       </button>
                     ))}
                   </div>
+                </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">Waktu kegiatan</label>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <input className="form-input" type="date" value={actDate} onChange={(e) => setActDate(e.target.value)} style={{ flex: "1 1 140px" }} />
+                    <input className="form-input" type="time" value={actTime} onChange={(e) => setActTime(e.target.value)} style={{ flex: "0 1 120px" }} />
+                  </div>
+                  <div style={{ fontSize: 10, color: "var(--text-hint)", marginTop: 4 }}>Kapan kejadian ini benar-benar terjadi (boleh di masa lalu).</div>
                 </div>
                 <div className="form-group" style={{ margin: 0 }}>
                   <label className="form-label">Judul singkat *</label>

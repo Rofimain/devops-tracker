@@ -73,6 +73,7 @@ export async function ensureProjectSchema(): Promise<void> {
 
     await ensureProjectInfraTableAndRows();
     await ensureLogbookTable();
+    await ensureLogbookOccurredAtColumn();
     await ensureCloudflareTables();
     await ensureLoginAllowlistTable();
   } catch (e) {
@@ -99,6 +100,7 @@ CREATE TABLE IF NOT EXISTS "LogbookEntry" (
     "category" TEXT NOT NULL,
     "title" TEXT NOT NULL,
     "body" TEXT NOT NULL,
+    "occurredAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "LogbookEntry_pkey" PRIMARY KEY ("id")
@@ -112,6 +114,32 @@ CREATE TABLE IF NOT EXISTS "LogbookEntry" (
 ALTER TABLE "LogbookEntry" ADD CONSTRAINT "LogbookEntry_userId_fkey"
   FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 `);
+}
+
+async function ensureLogbookOccurredAtColumn(): Promise<void> {
+  const tableExistsRows = await prisma.$queryRaw<[{ exists: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'LogbookEntry'
+    ) AS "exists"
+  `;
+  if (!Boolean(tableExistsRows[0]?.exists)) return;
+
+  const colRows = await prisma.$queryRaw<[{ exists: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'LogbookEntry' AND column_name = 'occurredAt'
+    ) AS "exists"
+  `;
+  if (Boolean(colRows[0]?.exists)) return;
+
+  await prisma.$executeRawUnsafe(`ALTER TABLE "LogbookEntry" ADD COLUMN "occurredAt" TIMESTAMP(3);`);
+  await prisma.$executeRawUnsafe(`UPDATE "LogbookEntry" SET "occurredAt" = "createdAt" WHERE "occurredAt" IS NULL;`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "LogbookEntry" ALTER COLUMN "occurredAt" SET DEFAULT CURRENT_TIMESTAMP;`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "LogbookEntry" ALTER COLUMN "occurredAt" SET NOT NULL;`);
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "LogbookEntry_occurredAt_idx" ON "LogbookEntry"("occurredAt");`
+  );
 }
 
 async function ensureLoginAllowlistTable(): Promise<void> {

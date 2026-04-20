@@ -158,18 +158,21 @@ model Activity {
 
 /// Catatan aktivitas DevOps per minggu ISO (bisa diisi oleh seluruh tim).
 model LogbookEntry {
-  id        String   @id @default(cuid())
-  userId    String
-  isoYear   Int
-  isoWeek   Int
-  category  String
-  title     String
-  body      String   @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  userId     String
+  isoYear    Int
+  isoWeek    Int
+  category   String
+  title      String
+  body       String   @db.Text
+  // Waktu kejadian yang dilaporkan (boleh beda dari waktu entri dibuat).
+  occurredAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([isoYear, isoWeek])
+  @@index([occurredAt])
 }
 
 /// Konfigurasi Cloudflare (satu baris). Zone ID & token disimpan dari UI admin.
