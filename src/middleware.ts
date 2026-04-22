@@ -41,6 +41,15 @@ export async function middleware(request: NextRequest) {
 
   const role = (token.role as string | undefined) ?? "MEMBER";
 
+  if (token.accountApproved === false) {
+    if (path === "/pending-approval") return NextResponse.next();
+    if (path.startsWith("/api/auth")) return NextResponse.next();
+    if (path.startsWith("/api/")) {
+      return NextResponse.json({ error: "Akun menunggu persetujuan admin" }, { status: 403 });
+    }
+    return NextResponse.redirect(new URL("/pending-approval", request.url));
+  }
+
   if (role === "OPERATOR") {
     if (path.startsWith("/purge")) return NextResponse.next();
     if (path.startsWith("/api/cloudflare")) return NextResponse.next();

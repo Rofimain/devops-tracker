@@ -13,6 +13,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
+  events: {
+    async createUser({ user }) {
+      if (!user.id) return;
+      const norm = normalizeEmail(user.email ?? "");
+      const isSuper = Boolean(SUPER_ADMIN_EMAIL.trim() && norm === normalizeEmail(SUPER_ADMIN_EMAIL));
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { accountApproved: isSuper ? true : false },
+      });
+    },
+  },
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -36,18 +47,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.id = user.id;
         const norm = normalizeEmail(user.email);
         if (SUPER_ADMIN_EMAIL.trim() && norm === normalizeEmail(SUPER_ADMIN_EMAIL)) {
-          await prisma.user.update({ where: { id: user.id }, data: { role: Role.SUPER_ADMIN } });
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { role: Role.SUPER_ADMIN, accountApproved: true },
+          });
         } else {
           const invite = await prisma.loginAllowlist.findUnique({ where: { email: norm } });
           if (invite) {
-            await prisma.user.update({ where: { id: user.id }, data: { role: invite.invitedRole } });
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { role: invite.invitedRole },
+            });
           }
         }
+      }
+
+      if (token.id) {
         const dbUser = await prisma.user.findUnique({
-          where: { id: user.id },
-          select: { role: true },
+          where: { id: token.id as string },
+          select: { role: true, accountApproved: true },
         });
-        token.role = dbUser?.role ?? Role.MEMBER;
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.accountApproved = dbUser.accountApproved;
+        }
       }
       return token;
     },
@@ -55,6 +78,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (token && session.user) {
         session.user.id = token.id as string;
         session.user.role = token.role as Role;
+        session.user.accountApproved = token.accountApproved === true;
       }
       return session;
     },

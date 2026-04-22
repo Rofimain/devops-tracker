@@ -33,7 +33,7 @@ export default async function AdminUsersPage() {
                   <th>User</th>
                   <th>Email</th>
                   <th>Role</th>
-                  <th>Status</th>
+                  <th>Akses</th>
                   <th>Joined</th>
                   {isSuperAdmin(session?.user?.role) && <th>Actions</th>}
                 </tr>
@@ -58,12 +58,18 @@ export default async function AdminUsersPage() {
                     <td>
                       <span className={`badge ${ROLE_COLORS[user.role]}`}>{user.role.replace("_", " ")}</span>
                     </td>
-                    <td><span className="badge badge-green">Active</span></td>
+                    <td>
+                      {user.accountApproved ? (
+                        <span className="badge badge-green">Disetujui</span>
+                      ) : (
+                        <span className="badge badge-yellow">Menunggu</span>
+                      )}
+                    </td>
                     <td style={{ fontSize: 11, color: "var(--text-muted)" }}>{timeAgo(user.createdAt)}</td>
                     {isSuperAdmin(session?.user?.role) && (
                       <td>
                         {user.role !== "SUPER_ADMIN" && (
-                          <UserActions userId={user.id} currentRole={user.role} />
+                          <UserActions userId={user.id} currentRole={user.role} accountApproved={user.accountApproved} />
                         )}
                       </td>
                     )}

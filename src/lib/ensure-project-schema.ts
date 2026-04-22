@@ -1,5 +1,45 @@
 import { prisma } from "@/lib/prisma";
 
+/** Enum Postgres `Role` sering tertinggal saat menambah OPERATOR di Prisma — selaraskan. */
+async function ensurePostgresRoleEnumOperator(): Promise<void> {
+  const typeRows = await prisma.$queryRaw<[{ exists: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_type t
+      JOIN pg_namespace n ON n.oid = t.typnamespace
+      WHERE n.nspname = 'public' AND t.typname = 'Role'
+    ) AS "exists"
+  `;
+  if (!Boolean(typeRows[0]?.exists)) return;
+
+  const hasOp = await prisma.$queryRaw<[{ exists: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_enum e
+      JOIN pg_type t ON e.enumtypid = t.oid
+      JOIN pg_namespace n ON n.oid = t.typnamespace
+      WHERE n.nspname = 'public' AND t.typname = 'Role' AND e.enumlabel = 'OPERATOR'
+    ) AS "exists"
+  `;
+  if (Boolean(hasOp[0]?.exists)) return;
+
+  await prisma.$executeRawUnsafe(`ALTER TYPE "Role" ADD VALUE 'OPERATOR'`);
+}
+
+/** Persetujuan akses: user lama disetujui, user baru default false (sesuai Prisma). */
+async function ensureUserAccountApprovedColumn(): Promise<void> {
+  const colRows = await prisma.$queryRaw<[{ exists: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'User' AND column_name = 'accountApproved'
+    ) AS "exists"
+  `;
+  if (Boolean(colRows[0]?.exists)) return;
+
+  await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN "accountApproved" BOOLEAN;`);
+  await prisma.$executeRawUnsafe(`UPDATE "User" SET "accountApproved" = true WHERE "accountApproved" IS NULL;`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "User" ALTER COLUMN "accountApproved" SET NOT NULL;`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "User" ALTER COLUMN "accountApproved" SET DEFAULT true;`);
+}
+
 /**
  * Menyamakan tabel Project dengan schema Prisma saat ini jika migrasi
  * belum pernah dijalankan di DB (mis. deploy gagal / hanya db push lama).
@@ -10,6 +50,9 @@ export async function ensureProjectSchema(): Promise<void> {
   if (process.env.NEXT_PHASE === "phase-production-build") return;
 
   try {
+    await ensurePostgresRoleEnumOperator();
+    await ensureUserAccountApprovedColumn();
+
     const webBasedRows = await prisma.$queryRaw<[{ exists: boolean }]>`
       SELECT EXISTS (
         SELECT 1 FROM information_schema.columns
