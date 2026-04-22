@@ -5,7 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import type { LucideIcon } from "lucide-react";
-import { LayoutDashboard, List, Wrench, FileText, Users, Settings, LogOut, Server, BookMarked, CloudOff, ScrollText, UserPlus } from "lucide-react";
+import { LayoutDashboard, List, Wrench, FileText, Users, Settings, LogOut, Server, BookMarked, CloudOff, ScrollText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { canPurgeCloudflare, isAdminRole, isSuperAdminRole } from "@/lib/roles";
 
@@ -33,7 +33,6 @@ const navItems: NavItem[] = [
   { kind: "section", label: "Admin", visible: (r) => isAdminRole(r) },
   { kind: "link", label: "Users", href: "/admin/users", icon: Users, visible: (r) => isAdminRole(r) },
   { kind: "link", label: "Log aktivitas", href: "/admin/activity", icon: ScrollText, visible: (r) => isAdminRole(r) },
-  { kind: "link", label: "Undangan login", href: "/admin/invite", icon: UserPlus, visible: (r) => isSuperAdminRole(r) },
   { kind: "link", label: "Settings", href: "/settings", icon: Settings, visible: (r) => isSuperAdminRole(r) },
 ];
 

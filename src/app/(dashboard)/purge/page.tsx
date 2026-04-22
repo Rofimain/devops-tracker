@@ -8,7 +8,16 @@ import { PurgePlayground } from "./purge-playground";
 export default async function PurgePage() {
   const session = await auth();
   if (!session?.user?.role) redirect("/login");
-  if (!canPurgeCloudflare(session.user.role)) redirect("/");
+  if (!canPurgeCloudflare(session.user.role)) {
+    return (
+      <>
+        <Topbar title="Purge cache Cloudflare" breadcrumb="CDN" />
+        <div className="app-content">
+          <p style={{ fontSize: 14, color: "var(--text-secondary)" }}>Akun Anda tidak memiliki akses ke halaman ini.</p>
+        </div>
+      </>
+    );
+  }
 
   const [cfg, presets] = await Promise.all([
     prisma.cloudflareAppConfig.findUnique({ where: { id: "default" } }).catch(() => null),

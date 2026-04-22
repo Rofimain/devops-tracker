@@ -4,10 +4,14 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "./prisma";
 import { Role } from "@prisma/client";
 import { authConfig } from "@/auth.config";
-import { isEmailAllowedForSignIn, normalizeEmail } from "@/lib/login-allowlist";
+import { isAdminRole, isSuperAdminRole } from "@/lib/roles";
 
 const ALLOWED_DOMAIN = process.env.ALLOWED_EMAIL_DOMAIN ?? "";
 const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL ?? "";
+
+function normalizeEmail(email: string) {
+  return email.trim().toLowerCase();
+}
 
 /** Masa berlaku sesi (detik). Boleh diubah lewat env tanpa deploy ulang kode. Default 8 jam. Min 300 s, max 30 hari. */
 function sessionMaxAgeSeconds() {
@@ -47,10 +51,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (ALLOWED_DOMAIN && !email.endsWith(`@${ALLOWED_DOMAIN}`)) {
         return false;
       }
-      const allowed = await isEmailAllowedForSignIn(email);
-      if (!allowed) {
-        return "/login?error=InviteOnly";
-      }
       return true;
     },
     async jwt({ token, user }) {
@@ -62,14 +62,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             where: { id: user.id },
             data: { role: Role.SUPER_ADMIN, accountApproved: true },
           });
-        } else {
-          const invite = await prisma.loginAllowlist.findUnique({ where: { email: norm } });
-          if (invite) {
-            await prisma.user.update({
-              where: { id: user.id },
-              data: { role: invite.invitedRole },
-            });
-          }
         }
       }
 
@@ -98,8 +90,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 });
 
 export function isAdmin(role?: Role) {
-  return role === Role.ADMIN || role === Role.SUPER_ADMIN;
+  return isAdminRole(role);
 }
 export function isSuperAdmin(role?: Role) {
-  return role === Role.SUPER_ADMIN;
+  return isSuperAdminRole(role);
 }

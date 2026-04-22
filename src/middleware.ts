@@ -41,7 +41,8 @@ export async function middleware(request: NextRequest) {
 
   const role = (token.role as string | undefined) ?? "MEMBER";
 
-  if (token.accountApproved === false) {
+  /** Selaras dengan session (`accountApproved === true`): nilai lain/missing = tunggu persetujuan sampai JWT ter-refresh dari DB. */
+  if (token.accountApproved !== true) {
     if (path === "/pending-approval") return NextResponse.next();
     if (path.startsWith("/api/auth")) return NextResponse.next();
     if (path.startsWith("/api/")) {

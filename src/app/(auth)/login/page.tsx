@@ -9,8 +9,6 @@ export default async function LoginPage({ searchParams }: { searchParams: { erro
   const errorMessages: Record<string, string> = {
     OAuthAccountNotLinked: "Email ini sudah terdaftar dengan metode login lain.",
     AccessDenied: `Email kamu tidak diizinkan. Hanya email @${process.env.ALLOWED_EMAIL_DOMAIN} yang bisa login.`,
-    InviteOnly:
-      "Email belum didaftarkan oleh Super Admin. Hubungi admin untuk ditambahkan ke daftar undangan (meskipun domain sudah benar).",
     Default: "Terjadi kesalahan. Silakan coba lagi.",
   };
   const errorMsg = searchParams.error ? (errorMessages[searchParams.error] ?? errorMessages.Default) : null;
@@ -52,7 +50,7 @@ export default async function LoginPage({ searchParams }: { searchParams: { erro
 
         {/* Domain notice */}
         <div style={{ background: "var(--bg-subtle)", border: "1px solid var(--border)", borderRadius: 8, padding: "10px 12px", marginTop: 14, fontSize: 12, color: "var(--text-secondary)", textAlign: "center", lineHeight: 1.45 }}>
-          Hanya email <strong>@{process.env.ALLOWED_EMAIL_DOMAIN}</strong>. Jika Super Admin sudah mengaktifkan daftar undangan, hanya email yang didaftarkan (plus akun Super Admin) yang bisa masuk.
+          Hanya email <strong>@{process.env.ALLOWED_EMAIL_DOMAIN}</strong>. Akun baru perlu disetujui Super Admin di menu Users sebelum bisa mengakses portal.
         </div>
 
         <div style={{ marginTop: 16, paddingTop: 14, borderTop: "1px solid var(--border)", textAlign: "center", fontSize: 11, color: "var(--text-hint)" }}>

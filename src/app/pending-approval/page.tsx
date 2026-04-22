@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth";
 import { ensureProjectSchema } from "@/lib/ensure-project-schema";
+import { isOperatorRole } from "@/lib/roles";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -7,7 +8,9 @@ export default async function PendingApprovalPage() {
   await ensureProjectSchema();
   const session = await auth();
   if (!session?.user) redirect("/login");
-  if (session.user.accountApproved) redirect("/");
+  if (session.user.accountApproved) {
+    redirect(isOperatorRole(session.user.role) ? "/purge" : "/");
+  }
 
   return (
     <div

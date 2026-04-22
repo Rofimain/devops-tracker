@@ -22,18 +22,6 @@ model User {
   activities      Activity[]
   sessions        Session[]
   logbookEntries  LogbookEntry[]
-  invitesCreated  LoginAllowlist[]
-}
-
-/// Email yang diizinkan login (undangan Super Admin). Jika tabel kosong, cukup domain @ALLOWED_EMAIL_DOMAIN.
-model LoginAllowlist {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  note         String?
-  invitedRole  Role     @default(MEMBER)
-  invitedById  String?
-  invitedBy    User?    @relation(fields: [invitedById], references: [id], onDelete: SetNull)
-  createdAt    DateTime @default(now())
 }
 
 model Account {
