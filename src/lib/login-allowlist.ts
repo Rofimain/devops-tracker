@@ -8,8 +8,10 @@ export function normalizeEmail(email: string) {
 }
 
 /**
- * Jika ada minimal satu baris LoginAllowlist: hanya email di tabel (+ super admin env) yang boleh login.
- * Jika tabel kosong: hanya pengecekan domain (perilaku lama / dev).
+ * Jika daftar undangan kosong: cukup domain (mode lama / dev).
+ * Jika daftar undangan berisi email: boleh login jika (a) ada di undangan, atau (b) sudah punya akun User
+ *     dengan email yang sama — supaya anggota tim yang sudah terdaftar tidak terkunci setelah undangan diaktifkan.
+ *     Orang baru dengan domain saja (tanpa undangan & belum pernah login) tetap ditolak.
  */
 export async function isEmailAllowedForSignIn(email: string): Promise<boolean> {
   const normalized = normalizeEmail(email);
@@ -22,5 +24,11 @@ export async function isEmailAllowedForSignIn(email: string): Promise<boolean> {
   if (total === 0) return true;
 
   const row = await prisma.loginAllowlist.findUnique({ where: { email: normalized } });
-  return Boolean(row);
+  if (row) return true;
+
+  const existingUser = await prisma.user.findUnique({
+    where: { email: normalized },
+    select: { id: true },
+  });
+  return Boolean(existingUser);
 }

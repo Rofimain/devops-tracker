@@ -9,10 +9,21 @@ import { isEmailAllowedForSignIn, normalizeEmail } from "@/lib/login-allowlist";
 const ALLOWED_DOMAIN = process.env.ALLOWED_EMAIL_DOMAIN ?? "";
 const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL ?? "";
 
+/** Masa berlaku sesi (detik). Boleh diubah lewat env tanpa deploy ulang kode. Default 8 jam. Min 300 s, max 30 hari. */
+function sessionMaxAgeSeconds() {
+  const raw = process.env.SESSION_MAX_AGE_SECONDS?.trim();
+  const n = raw ? parseInt(raw, 10) : NaN;
+  if (!Number.isFinite(n) || n < 300) return 28_800;
+  return Math.min(n, 2_592_000);
+}
+
+const SESSION_MAX_AGE = sessionMaxAgeSeconds();
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: SESSION_MAX_AGE },
+  jwt: { maxAge: SESSION_MAX_AGE },
   events: {
     async createUser({ user }) {
       if (!user.id) return;

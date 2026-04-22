@@ -5,6 +5,7 @@ import { auth, isSuperAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { normalizeEmail } from "@/lib/login-allowlist";
 import { recordActivity } from "@/lib/activity-log";
+import { sendInviteEmail } from "@/lib/send-invite-email";
 
 const inviteRoleSchema = z.enum(["MEMBER", "ADMIN", "OPERATOR"]);
 
@@ -55,7 +56,22 @@ export async function POST(req: NextRequest) {
       details: `Undangan login: ${email} (role ${invitedRole})`,
       userId: session!.user.id,
     });
-    return NextResponse.json(row, { status: 201 });
+
+    const mail = await sendInviteEmail({
+      to: email,
+      invitedRole,
+      note: row.note,
+      inviterName: row.invitedBy?.name ?? row.invitedBy?.email ?? null,
+    });
+
+    return NextResponse.json(
+      {
+        ...row,
+        inviteEmailSent: mail.ok,
+        inviteEmailDetail: mail.ok ? undefined : mail.skipped || mail.error,
+      },
+      { status: 201 },
+    );
   } catch (e: any) {
     if (e.code === "P2002") return NextResponse.json({ error: "Email sudah ada di daftar" }, { status: 400 });
     return NextResponse.json({ error: e.message ?? "Error" }, { status: 500 });

@@ -18,11 +18,11 @@ export default async function AdminInvitePage() {
       <Topbar title="Undangan login" breadcrumb="Admin" />
       <div className="app-content">
         <div className="alert-info" style={{ marginBottom: 16 }}>
-          Jika ada <strong>minimal satu</strong> email di daftar ini, hanya email tersebut (plus Super Admin dari env) yang bisa login dengan Google — meskipun domain sama @{process.env.ALLOWED_EMAIL_DOMAIN}.
-          Jika daftar <strong>kosong</strong>, siapa pun dengan domain tersebut tetap bisa login (mode lama / dev).
+          Jika ada <strong>minimal satu</strong> email di daftar ini, yang bisa login pertama kali: email di daftar ini, Super Admin dari env, dan siapa pun yang <strong>sudah punya akun</strong> di portal (supaya tim lama tidak terkunci). Orang baru dengan domain saja tanpa undangan + belum pernah terdaftar tetap ditolak.
+          Jika daftar <strong>kosong</strong>, siapa pun dengan domain @{process.env.ALLOWED_EMAIL_DOMAIN} tetap bisa login (mode lama / dev).
           <br />
           <span style={{ marginTop: 8, display: "inline-block" }}>
-            User <strong>baru</strong> setelah login tetap harus <strong>disetujui</strong> di menu Users sebelum bisa membuka dashboard.
+            User <strong>baru</strong> setelah login tetap harus <strong>disetujui</strong> di menu Users sebelum bisa membuka dashboard. Email undangan butuh <span className="mono">RESEND_API_KEY</span> di env (lihat .env.example).
           </span>
         </div>
         <InviteAllowlistClient initialRows={JSON.parse(JSON.stringify(rows))} domain={process.env.ALLOWED_EMAIL_DOMAIN ?? ""} />

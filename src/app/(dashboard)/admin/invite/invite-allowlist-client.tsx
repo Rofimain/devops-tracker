@@ -27,11 +27,13 @@ export function InviteAllowlistClient({ initialRows, domain }: { initialRows: Ro
   const [note, setNote] = useState("");
   const [invitedRole, setInvitedRole] = useState<string>("MEMBER");
   const [err, setErr] = useState("");
+  const [mailHint, setMailHint] = useState("");
   const [loading, setLoading] = useState(false);
 
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr("");
+    setMailHint("");
     setLoading(true);
     try {
       const res = await fetch("/api/login-allowlist", {
@@ -44,7 +46,13 @@ export function InviteAllowlistClient({ initialRows, domain }: { initialRows: Ro
         setErr(data.error ?? "Gagal");
         return;
       }
-      setRows((r) => [data, ...r]);
+      const { inviteEmailSent, inviteEmailDetail, ...row } = data as Row & {
+        inviteEmailSent?: boolean;
+        inviteEmailDetail?: string;
+      };
+      setRows((r) => [row as Row, ...r]);
+      if (inviteEmailSent) setMailHint("Email undangan dikirim ke alamat tersebut.");
+      else if (inviteEmailDetail) setMailHint(`Undangan tersimpan di sistem. Email tidak terkirim: ${inviteEmailDetail}`);
       setEmail("");
       setNote("");
       setInvitedRole("MEMBER");
@@ -72,6 +80,11 @@ export function InviteAllowlistClient({ initialRows, domain }: { initialRows: Ro
           <span className="card-title">Tambah email</span>
         </div>
         <div className="card-body">
+          {mailHint ? (
+            <div className="alert-info" style={{ marginBottom: 12 }}>
+              {mailHint}
+            </div>
+          ) : null}
           <form onSubmit={add} className="grid-2" style={{ alignItems: "flex-end", gap: 12 }}>
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Email @{domain}</label>
