@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canPurgeCloudflare } from "@/lib/roles";
 import {
+  extractZoneOverrideFromPurgeRequest,
   fetchCloudflareZoneName,
   sanitizePurgeBody,
   validatePurgeBodyForZone,
@@ -21,11 +22,11 @@ export async function POST(req: NextRequest) {
   if (!canPurgeCloudflare(session.user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const cfg = await prisma.cloudflareAppConfig.findUnique({ where: { id: "default" } });
-  const zoneId = cfg?.zoneId?.trim();
+  const defaultZoneId = cfg?.zoneId?.trim() ?? "";
   const apiToken = cfg?.apiToken?.trim();
-  if (!zoneId || !apiToken) {
+  if (!apiToken) {
     return NextResponse.json(
-      { error: "Zone ID dan API token belum diatur. Buka tab Konfigurasi (admin) di halaman purge." },
+      { error: "API token Cloudflare belum diatur. Buka tab Konfigurasi (admin) di halaman purge." },
       { status: 503 }
     );
   }
@@ -37,7 +38,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Body harus JSON valid" }, { status: 400 });
   }
 
-  const body = sanitizePurgeBody(raw);
+  const { rest, zoneOverride } = extractZoneOverrideFromPurgeRequest(raw);
+  const effectiveZoneId = (zoneOverride ?? "").trim() || defaultZoneId;
+  if (!effectiveZoneId) {
+    return NextResponse.json(
+      {
+        error:
+          "Zone ID kosong. Atur Zone ID default di Konfigurasi, atau kirim field \"zoneId\" di JSON (preset per-zone), atau isi Zone ID di preset.",
+      },
+      { status: 503 }
+    );
+  }
+
+  const body = sanitizePurgeBody(rest);
   if (!body) {
     return NextResponse.json(
       { error: "Body tidak valid. Gunakan salah satu: files, hosts, prefixes, tags (array string non-kosong)." },
@@ -57,7 +70,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const zoneMeta = await fetchCloudflareZoneName(zoneId, apiToken);
+  const zoneMeta = await fetchCloudflareZoneName(effectiveZoneId, apiToken);
   if ("error" in zoneMeta) {
     return NextResponse.json(
       { ok: false, error: zoneMeta.error, message: zoneMeta.error },
@@ -71,7 +84,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const res = await fetch(`https://api.cloudflare.com/client/v4/zones/${zoneId}/purge_cache`, {
+    const res = await fetch(`https://api.cloudflare.com/client/v4/zones/${effectiveZoneId}/purge_cache`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiToken}`,
@@ -87,7 +100,7 @@ export async function POST(req: NextRequest) {
       const msg = data.errors?.map((e) => e.message).join("; ") || data.messages?.join("; ") || res.statusText;
       await recordActivity(req, {
         action: "CLOUDFLARE_PURGE_FAIL",
-        details: `Purge gagal (${purgeSummary(body)}): ${msg || res.statusText}`.slice(0, 500),
+        details: `Purge gagal zone=${effectiveZoneId.slice(0, 12)}… (${purgeSummary(body)}): ${msg || res.statusText}`.slice(0, 500),
         userId: session.user.id,
       });
       return NextResponse.json({ ok: false, status: res.status, message: msg || "Cloudflare error", body: text }, { status: 502 });
@@ -95,7 +108,7 @@ export async function POST(req: NextRequest) {
 
     await recordActivity(req, {
       action: "CLOUDFLARE_PURGE",
-      details: `Purge cache OK (${purgeSummary(body)})`,
+      details: `Purge cache OK zone=${effectiveZoneId.slice(0, 12)}… (${purgeSummary(body)})`,
       userId: session.user.id,
     });
     return NextResponse.json({ ok: true, status: res.status, body: text });

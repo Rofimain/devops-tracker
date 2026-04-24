@@ -6,6 +6,7 @@ import { recordActivity } from "@/lib/activity-log";
 
 const patchSchema = z.object({
   name: z.string().min(1).max(120).optional(),
+  zoneId: z.string().max(200).optional(),
   bodyJson: z.string().min(2).max(10000).optional(),
   sortOrder: z.number().int().optional(),
 });
@@ -32,6 +33,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       where: { id: params.id },
       data: {
         ...(parsed.data.name != null ? { name: parsed.data.name.trim() } : {}),
+        ...(parsed.data.zoneId !== undefined ? { zoneId: parsed.data.zoneId.trim() } : {}),
         ...(parsed.data.bodyJson != null ? { bodyJson: parsed.data.bodyJson.trim() } : {}),
         ...(parsed.data.sortOrder != null ? { sortOrder: parsed.data.sortOrder } : {}),
       },

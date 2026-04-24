@@ -1,6 +1,23 @@
 /** Kunci body purge yang diizinkan Cloudflare (tanpa purge_everything). */
 const ALLOWED_KEYS = new Set(["files", "hosts", "prefixes", "tags"]);
 
+/**
+ * `zoneId` di body JSON (bukan field Cloudflare) — dipakai agar satu token bisa purge beberapa zone.
+ * Dikeluarkan sebelum `sanitizePurgeBody`.
+ */
+export function extractZoneOverrideFromPurgeRequest(raw: unknown): { rest: unknown; zoneOverride: string | null } {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    return { rest: raw, zoneOverride: null };
+  }
+  const o = raw as Record<string, unknown>;
+  let zoneOverride: string | null = null;
+  if (typeof o.zoneId === "string" && o.zoneId.trim()) {
+    zoneOverride = o.zoneId.trim();
+  }
+  const { zoneId: _z, ...rest } = o;
+  return { rest, zoneOverride };
+}
+
 export function sanitizePurgeBody(input: unknown): Record<string, string[]> | null {
   if (!input || typeof input !== "object" || Array.isArray(input)) return null;
   const o = input as Record<string, unknown>;

@@ -182,6 +182,8 @@ model CloudflareAppConfig {
 model PurgePreset {
   id        String   @id @default(cuid())
   name      String
+  /// Zone Cloudflare untuk preset ini (token API tetap dari Settings). Kosong = pakai zone default di CloudflareAppConfig.
+  zoneId    String   @default("")
   bodyJson  String   @db.Text
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())

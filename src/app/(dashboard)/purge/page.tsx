@@ -26,13 +26,43 @@ export default async function PurgePage() {
     prisma.purgePreset.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }).catch(() => []),
   ]);
 
-  let zoneRootHint: string | null = null;
-  const zid = cfg?.zoneId?.trim();
+  let defaultZoneRootHint: string | null = null;
+  const defaultZ = cfg?.zoneId?.trim() ?? "";
   const tok = cfg?.apiToken?.trim();
-  if (zid && tok) {
-    const zr = await fetchCloudflareZoneName(zid, tok);
-    if ("name" in zr) zoneRootHint = zr.name;
+  const zoneNameById = new Map<string, string | null>();
+  if (defaultZ && tok) {
+    const zr = await fetchCloudflareZoneName(defaultZ, tok);
+    if ("name" in zr) {
+      defaultZoneRootHint = zr.name;
+      zoneNameById.set(defaultZ, zr.name);
+    } else {
+      zoneNameById.set(defaultZ, null);
+    }
   }
+
+  if (tok) {
+    const uniqueIds = Array.from(
+      new Set(presets.map((p) => (p.zoneId?.trim() || defaultZ).trim()).filter((id): id is string => Boolean(id)))
+    );
+    for (const id of uniqueIds) {
+      if (zoneNameById.has(id)) continue;
+      const zr = await fetchCloudflareZoneName(id, tok);
+      zoneNameById.set(id, "name" in zr ? zr.name : null);
+    }
+  }
+
+  const presetRows = presets
+    .map((p) => {
+      const effectiveZoneId = (p.zoneId?.trim() || defaultZ).trim();
+      return {
+        id: p.id,
+        name: p.name,
+        bodyJson: p.bodyJson,
+        effectiveZoneId,
+        zoneLabel: effectiveZoneId ? zoneNameById.get(effectiveZoneId) ?? null : null,
+      };
+    })
+    .filter((r) => r.effectiveZoneId);
 
   const operator = isOperatorRole(session.user.role);
 
@@ -41,10 +71,15 @@ export default async function PurgePage() {
       <Topbar title="Purge cache Cloudflare" breadcrumb="CDN" />
       <div className="app-content">
         {operator ? (
-          <PurgeOperatorSimple initialHasToken={Boolean(tok)} zoneRootHint={zoneRootHint} />
+          <PurgeOperatorSimple
+            initialHasToken={Boolean(tok)}
+            defaultZoneId={defaultZ}
+            defaultZoneRootHint={defaultZoneRootHint}
+            presetRows={presetRows}
+          />
         ) : (
           <PurgePlayground
-            initialZoneId={cfg?.zoneId ?? ""}
+            initialZoneId={defaultZ}
             initialHasToken={Boolean(tok)}
             initialPresets={presets}
             canConfigure={isAdmin(session.user.role)}

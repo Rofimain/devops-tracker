@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Cloud, Loader2, Play, Plus, Save, Settings2, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Preset = { id: string; name: string; bodyJson: string; sortOrder: number };
+type Preset = { id: string; name: string; zoneId: string; bodyJson: string; sortOrder: number };
 
 const DEFAULT_BODY = `{
   "hosts": [
@@ -38,11 +38,14 @@ export function PurgePlayground({
   const [savingCfg, setSavingCfg] = useState(false);
 
   const [newPresetName, setNewPresetName] = useState("");
+  const [newPresetZoneId, setNewPresetZoneId] = useState("");
   const [editingPreset, setEditingPreset] = useState<Preset | null>(null);
 
   const zid = (zoneId || initialZoneId).trim();
-  const endpoint = zid
-    ? `https://api.cloudflare.com/client/v4/zones/${zid}/purge_cache`
+  const activePreset = useMemo(() => presets.find((p) => p.id === activePresetId) ?? null, [presets, activePresetId]);
+  const effectivePurgeZid = (activePreset?.zoneId?.trim() || zid).trim();
+  const endpoint = effectivePurgeZid
+    ? `https://api.cloudflare.com/client/v4/zones/${effectivePurgeZid}/purge_cache`
     : "https://api.cloudflare.com/client/v4/zones/{zone_id}/purge_cache";
 
   const reloadPresets = useCallback(async () => {
@@ -62,6 +65,16 @@ export function PurgePlayground({
       setErr("JSON body tidak valid.");
       return;
     }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      setErr("Body harus berupa object JSON (mis. { \"hosts\": [...] }).");
+      return;
+    }
+    const ez = effectivePurgeZid;
+    if (!ez) {
+      setErr("Zone ID kosong. Isi Zone ID di tab Konfigurasi (default) atau Zone ID khusus di preset.");
+      return;
+    }
+    const payload = { ...(parsed as Record<string, unknown>), zoneId: ez };
     setSending(true);
     setErr("");
     setResponseText("");
@@ -70,7 +83,7 @@ export function PurgePlayground({
       const res = await fetch("/api/cloudflare/purge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(parsed),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (data.body) {
@@ -124,7 +137,7 @@ export function PurgePlayground({
       const res = await fetch("/api/purge-presets", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newPresetName.trim(), bodyJson }),
+        body: JSON.stringify({ name: newPresetName.trim(), zoneId: newPresetZoneId.trim(), bodyJson }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -132,6 +145,7 @@ export function PurgePlayground({
         return;
       }
       setNewPresetName("");
+      setNewPresetZoneId("");
       await reloadPresets();
       setActivePresetId(data.id);
     } catch {
@@ -151,7 +165,7 @@ export function PurgePlayground({
     const res = await fetch(`/api/purge-presets/${editingPreset.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: editingPreset.name, bodyJson: editingPreset.bodyJson }),
+      body: JSON.stringify({ name: editingPreset.name, zoneId: editingPreset.zoneId, bodyJson: editingPreset.bodyJson }),
     });
     if (res.ok) {
       setEditingPreset(null);
@@ -179,11 +193,17 @@ export function PurgePlayground({
           </div>
           <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <p style={{ fontSize: 12, color: "var(--text-muted)", margin: 0, lineHeight: 1.5 }}>
-              Token perlu permission <strong>Zone → Cache Purge → Purge</strong>. Token tidak pernah ditampilkan ulang setelah disimpan; kosongkan field token jika hanya mengubah Zone ID.
+              Token dipakai untuk semua zone. Pastikan token punya akses purge ke setiap Zone ID yang dipakai (preset bisa punya zone berbeda). Token perlu permission{" "}
+              <strong>Zone → Cache Purge → Purge</strong>. Token tidak pernah ditampilkan ulang setelah disimpan; kosongkan field token jika hanya mengubah Zone ID default.
             </p>
             <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label">Zone ID</label>
-              <input className="form-input mono" value={zoneId} onChange={(e) => setZoneId(e.target.value)} placeholder="dari dashboard Cloudflare → Overview" />
+              <label className="form-label">Zone ID default</label>
+              <input
+                className="form-input mono"
+                value={zoneId}
+                onChange={(e) => setZoneId(e.target.value)}
+                placeholder="dipakai jika preset tidak mengisi Zone ID sendiri"
+              />
             </div>
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">API Token {hasToken ? <span className="badge badge-green" style={{ fontSize: 9 }}>tersimpan</span> : null}</label>
@@ -220,7 +240,20 @@ export function PurgePlayground({
                     onClick={() => selectPreset(p)}
                   >
                     <span className="purge-method">POST</span>
-                    <span className="purge-preset-name">{p.name}</span>
+                    <span style={{ flex: 1, minWidth: 0, textAlign: "left" }}>
+                      <span className="purge-preset-name">{p.name}</span>
+                      <span
+                        style={{
+                          display: "block",
+                          fontSize: 10,
+                          color: "var(--text-muted)",
+                          fontFamily: "JetBrains Mono, ui-monospace, monospace",
+                          marginTop: 2,
+                        }}
+                      >
+                        {p.zoneId?.trim() ? `zone ${p.zoneId.trim().slice(0, 14)}${p.zoneId.trim().length > 14 ? "…" : ""}` : "zone: default"}
+                      </span>
+                    </span>
                   </button>
                 ))
               )}
@@ -229,10 +262,18 @@ export function PurgePlayground({
               <div className="purge-sidebar-footer">
                 <input
                   className="form-input"
-                  style={{ marginBottom: 8, fontSize: 11 }}
+                  style={{ marginBottom: 6, fontSize: 11 }}
                   placeholder="Nama preset baru…"
                   value={newPresetName}
                   onChange={(e) => setNewPresetName(e.target.value)}
+                />
+                <input
+                  className="form-input mono"
+                  style={{ marginBottom: 8, fontSize: 11 }}
+                  placeholder="Zone ID preset (opsional)"
+                  value={newPresetZoneId}
+                  onChange={(e) => setNewPresetZoneId(e.target.value)}
+                  title="Kosongkan agar memakai Zone ID default dari tab Konfigurasi"
                 />
                 <button type="button" className="btn btn-primary btn-sm" style={{ width: "100%" }} onClick={addPreset}>
                   <Plus size={14} /> Simpan sebagai preset
@@ -275,7 +316,7 @@ export function PurgePlayground({
                     <Trash2 size={14} /> Hapus preset
                   </button>
                   <button type="button" className="btn btn-sm" onClick={() => setEditingPreset(presets.find((x) => x.id === activePresetId) ?? null)}>
-                    Edit nama / body
+                    Edit preset
                   </button>
                 </>
               )}
@@ -297,6 +338,14 @@ export function PurgePlayground({
                 </div>
                 <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   <input className="form-input" value={editingPreset.name} onChange={(e) => setEditingPreset({ ...editingPreset, name: e.target.value })} />
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label className="form-label">Zone ID preset (kosong = default)</label>
+                    <input
+                      className="form-input mono"
+                      value={editingPreset.zoneId}
+                      onChange={(e) => setEditingPreset({ ...editingPreset, zoneId: e.target.value })}
+                    />
+                  </div>
                   <textarea
                     className="purge-json-editor"
                     style={{ minHeight: 160 }}

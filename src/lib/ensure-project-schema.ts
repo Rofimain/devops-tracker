@@ -118,6 +118,7 @@ export async function ensureProjectSchema(): Promise<void> {
     await ensureLogbookTable();
     await ensureLogbookOccurredAtColumn();
     await ensureCloudflareTables();
+    await ensurePurgePresetZoneIdColumn();
     await ensureActivityAuditColumns();
   } catch (e) {
     console.error("[ensureProjectSchema] gagal menyelaraskan DB:", e);
@@ -234,6 +235,7 @@ ON CONFLICT ("id") DO NOTHING;
 CREATE TABLE IF NOT EXISTS "PurgePreset" (
     "id" TEXT NOT NULL,
     "name" TEXT NOT NULL,
+    "zoneId" TEXT NOT NULL DEFAULT '',
     "bodyJson" TEXT NOT NULL,
     "sortOrder" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -241,6 +243,26 @@ CREATE TABLE IF NOT EXISTS "PurgePreset" (
     CONSTRAINT "PurgePreset_pkey" PRIMARY KEY ("id")
 );
 `);
+}
+
+async function ensurePurgePresetZoneIdColumn(): Promise<void> {
+  const tableExistsRows = await prisma.$queryRaw<[{ exists: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'PurgePreset'
+    ) AS "exists"
+  `;
+  if (!Boolean(tableExistsRows[0]?.exists)) return;
+
+  const colRows = await prisma.$queryRaw<[{ exists: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'PurgePreset' AND column_name = 'zoneId'
+    ) AS "exists"
+  `;
+  if (Boolean(colRows[0]?.exists)) return;
+
+  await prisma.$executeRawUnsafe(`ALTER TABLE "PurgePreset" ADD COLUMN "zoneId" TEXT NOT NULL DEFAULT '';`);
 }
 
 /** Tabel ProjectInfra + baris per project (sering ketinggalan jika migrate deploy gagal). */

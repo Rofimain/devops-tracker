@@ -7,6 +7,7 @@ import { canPurgeCloudflare } from "@/lib/roles";
 
 const postSchema = z.object({
   name: z.string().min(1).max(120),
+  zoneId: z.string().max(200).optional(),
   bodyJson: z.string().min(2).max(10000),
   sortOrder: z.number().int().optional(),
 });
@@ -45,6 +46,7 @@ export async function POST(req: NextRequest) {
     const preset = await prisma.purgePreset.create({
       data: {
         name: parsed.data.name.trim(),
+        zoneId: (parsed.data.zoneId ?? "").trim(),
         bodyJson: parsed.data.bodyJson.trim(),
         sortOrder: parsed.data.sortOrder ?? 0,
       },
