@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth, signIn } from "@/lib/auth";
-import { Server, AlertTriangle } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 
 export default async function LoginPage({ searchParams }: { searchParams: { error?: string } }) {
   const session = await auth();
@@ -19,10 +20,24 @@ export default async function LoginPage({ searchParams }: { searchParams: { erro
 
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <div style={{ width: 44, height: 44, background: "var(--accent)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
-            <Server size={22} color="white" />
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 220,
+              margin: "0 auto 14px",
+              padding: "10px 12px",
+              background: "#fff",
+              borderRadius: 12,
+              border: "1px solid var(--border)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <BrandLogo width={196} height={52} priority />
           </div>
           <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>DevOps Tracker</div>
+          <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 2 }}>PT. Global Media Visual</div>
           <div style={{ fontSize: 12, color: "var(--text-muted)" }}>Sign in ke Internal DevOps Portal</div>
         </div>
 

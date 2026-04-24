@@ -5,8 +5,9 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import type { LucideIcon } from "lucide-react";
-import { LayoutDashboard, List, Wrench, FileText, Users, Settings, LogOut, Server, BookMarked, CloudOff, ScrollText } from "lucide-react";
+import { LayoutDashboard, List, Wrench, FileText, Users, Settings, LogOut, BookMarked, CloudOff, ScrollText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BrandLogo } from "@/components/brand-logo";
 import { canPurgeCloudflare, isAdminRole, isSuperAdminRole } from "@/lib/roles";
 
 type NavItem =
@@ -70,11 +71,11 @@ export function Sidebar({
     <aside className={cn("app-sidebar", className)}>
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">
-          <Server size={16} color="white" />
+          <BrandLogo width={46} height={34} />
         </div>
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>DevOps Tracker</div>
-          <div style={{ fontSize: 10, color: "var(--text-muted)" }}>Internal Portal</div>
+          <div style={{ fontSize: 10, color: "var(--text-muted)" }}>PT. Global Media Visual</div>
         </div>
       </div>
 

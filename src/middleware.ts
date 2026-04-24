@@ -13,6 +13,10 @@ export async function middleware(request: NextRequest) {
   if (path.startsWith("/_next") || path === "/favicon.ico") {
     return NextResponse.next();
   }
+  /** Logo & favicon (public + metadata route) — harus bisa diakses tanpa sesi */
+  if (path.startsWith("/branding/") || path === "/icon") {
+    return NextResponse.next();
+  }
   if (path.startsWith("/api/auth")) {
     return NextResponse.next();
   }

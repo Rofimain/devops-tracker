@@ -7,6 +7,10 @@ import { auth } from "@/lib/auth";
 export const metadata: Metadata = {
   title: "DevOps Tracker",
   description: "Internal DevOps Project Tracking Portal",
+  icons: {
+    icon: [{ url: "/branding/gmv-logo.jpg", type: "image/jpeg" }],
+    apple: [{ url: "/branding/gmv-logo.jpg", sizes: "180x180" }],
+  },
 };
 
 export const viewport: Viewport = {
