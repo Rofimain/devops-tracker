@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { canPurgeCloudflare } from "@/lib/roles";
-import { sanitizePurgeBody } from "@/lib/cloudflare-purge";
+import {
+  fetchCloudflareZoneName,
+  sanitizePurgeBody,
+  validatePurgeBodyForZone,
+} from "@/lib/cloudflare-purge";
 import { recordActivity } from "@/lib/activity-log";
 
 function purgeSummary(body: Record<string, string[]>) {
@@ -39,6 +43,31 @@ export async function POST(req: NextRequest) {
       { error: "Body tidak valid. Gunakan salah satu: files, hosts, prefixes, tags (array string non-kosong)." },
       { status: 400 }
     );
+  }
+
+  const bodyKeys = Object.keys(body);
+  if (bodyKeys.length > 1) {
+    return NextResponse.json(
+      {
+        error:
+          "Hanya satu jenis purge per permintaan (files, hosts, prefixes, atau tags). Cloudflare tidak mendukung gabungan dalam satu body.",
+        ok: false,
+      },
+      { status: 400 }
+    );
+  }
+
+  const zoneMeta = await fetchCloudflareZoneName(zoneId, apiToken);
+  if ("error" in zoneMeta) {
+    return NextResponse.json(
+      { ok: false, error: zoneMeta.error, message: zoneMeta.error },
+      { status: 502 }
+    );
+  }
+
+  const zoneMismatch = validatePurgeBodyForZone(zoneMeta.name, body);
+  if (zoneMismatch) {
+    return NextResponse.json({ ok: false, error: zoneMismatch, message: zoneMismatch }, { status: 400 });
   }
 
   try {
