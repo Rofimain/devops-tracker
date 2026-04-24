@@ -4,7 +4,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProvider } from "@/components/session-provider";
 import { auth } from "@/lib/auth";
 
-const BRAND_ICON = "/branding/gmv-logo.jpg?v=gmv2";
+const BRAND_ICON = "/branding/gmv-logo.jpg?v=gmv3";
 
 function metadataBaseUrl(): URL | undefined {
   const raw = process.env.NEXTAUTH_URL?.trim();
@@ -21,8 +21,11 @@ export const metadata: Metadata = {
   title: "DevOps Tracker",
   description: "Internal DevOps Project Tracking Portal",
   icons: {
-    /** /favicon.ico di-redirect (next.config) ke logo JPEG — pola yang paling sering dipakai tab browser */
-    icon: [{ url: "/favicon.ico", sizes: "any" }],
+    /** File biner asli di `public/` (Chrome sering menolak redirect / JPEG palsu sebagai .ico) */
+    icon: [
+      { url: "/favicon.ico", sizes: "48x48" },
+      { url: "/favicon.png?v=gmv3", type: "image/png", sizes: "32x32" },
+    ],
     apple: [{ url: BRAND_ICON, sizes: "180x180" }],
   },
 };
