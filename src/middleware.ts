@@ -10,11 +10,16 @@ function secret() {
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
-  if (path.startsWith("/_next") || path === "/favicon.ico") {
+  if (path.startsWith("/_next")) {
     return NextResponse.next();
   }
-  /** Logo & favicon (public + metadata route) — harus bisa diakses tanpa sesi */
-  if (path.startsWith("/branding/") || path === "/icon") {
+  /** Logo & favicon di `public/` — jangan redirect ke /login (Chrome memakai /favicon.png dari metadata) */
+  if (
+    path.startsWith("/branding/") ||
+    path === "/favicon.ico" ||
+    path === "/favicon.png" ||
+    path === "/icon"
+  ) {
     return NextResponse.next();
   }
   if (path.startsWith("/api/auth")) {
@@ -94,5 +99,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|favicon.png|branding/).*)"],
 };
