@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { auth, isAdmin } from "@/lib/auth";
+import { fetchCloudFrontDistributionLabel } from "@/lib/cloudfront-distribution-label";
 import { prisma } from "@/lib/prisma";
-import { canPurgeCloudflare } from "@/lib/roles";
+import { canPurgeCloudflare, isOperatorRole } from "@/lib/roles";
 import { Topbar } from "@/components/topbar";
 import { CloudFrontInvalidationClient } from "./cloudfront-invalidation-client";
 
@@ -20,11 +21,20 @@ export default async function CloudFrontPage() {
   }
 
   const admin = isAdmin(session.user.role);
+  const operator = isOperatorRole(session.user.role);
   const cfg = await prisma.cloudFrontAppConfig.findUnique({ where: { id: "default" } }).catch(() => null);
 
   const configured = Boolean(
     cfg?.distributionId?.trim() && cfg?.accessKeyId?.trim() && cfg?.secretAccessKey?.trim(),
   );
+
+  let distributionDescription: string | null = null;
+  let distributionDescriptionError: string | null = null;
+  if (configured && cfg?.distributionId && cfg?.accessKeyId && cfg?.secretAccessKey) {
+    const meta = await fetchCloudFrontDistributionLabel(cfg.distributionId, cfg.accessKeyId, cfg.secretAccessKey);
+    distributionDescription = meta.label;
+    distributionDescriptionError = meta.fetchError;
+  }
 
   const initialSettings = admin
     ? {
@@ -35,8 +45,10 @@ export default async function CloudFrontPage() {
       }
     : null;
 
+  const distIdTrim = (cfg?.distributionId ?? "").trim();
   const configSummary = {
-    distributionId: (cfg?.distributionId ?? "").trim(),
+    /** Jangan dikirim ke UI untuk operator (jangan tampilkan ID mentah). */
+    distributionId: operator ? "" : distIdTrim,
     hasAccessKey: Boolean(cfg?.accessKeyId?.trim()),
     hasSecret: Boolean(cfg?.secretAccessKey?.trim()),
   };
@@ -48,6 +60,9 @@ export default async function CloudFrontPage() {
         <CloudFrontInvalidationClient
           configured={configured}
           canConfigure={admin}
+          isOperator={operator}
+          distributionDescription={distributionDescription}
+          distributionDescriptionError={distributionDescriptionError}
           initialSettings={initialSettings}
           configSummary={configSummary}
         />

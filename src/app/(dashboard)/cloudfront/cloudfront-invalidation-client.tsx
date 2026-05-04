@@ -13,6 +13,7 @@ type InitialSettings = {
 };
 
 type ConfigSummary = {
+  /** Kosong untuk operator — jangan tampilkan ID mentah. Admin dapat ID lengkap. */
   distributionId: string;
   hasAccessKey: boolean;
   hasSecret: boolean;
@@ -37,11 +38,17 @@ const POLL_MAX = 90;
 export function CloudFrontInvalidationClient({
   configured,
   canConfigure,
+  isOperator,
+  distributionDescription,
+  distributionDescriptionError,
   initialSettings,
   configSummary,
 }: {
   configured: boolean;
   canConfigure: boolean;
+  isOperator: boolean;
+  distributionDescription: string | null;
+  distributionDescriptionError: string | null;
   initialSettings: InitialSettings | null;
   configSummary: ConfigSummary;
 }) {
@@ -242,34 +249,60 @@ export function CloudFrontInvalidationClient({
           <h2 className="cloudfront-card-title">Invalidate cache (CloudFront)</h2>
 
           <div className="cloudfront-summary">
-            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Status konfigurasi (di server)</div>
+            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
+              {isOperator ? "Konfigurasi" : "Status konfigurasi (di server)"}
+            </div>
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "var(--text-secondary)" }}>
               <li>
-                Distribution ID:{" "}
-                {configSummary.distributionId ? (
-                  <code>{configSummary.distributionId}</code>
+                Deskripsi (dari AWS):{" "}
+                {distributionDescription?.trim() ? (
+                  <span style={{ color: "var(--text-primary)" }}>{distributionDescription.trim()}</span>
                 ) : (
-                  <span style={{ color: "var(--accent-warning, #c9a227)" }}>belum diisi</span>
+                  <span style={{ color: "var(--text-muted)" }}>—</span>
                 )}
               </li>
+              {!isOperator ? (
+                <li>
+                  Distribution ID:{" "}
+                  {configSummary.distributionId ? (
+                    <code>{configSummary.distributionId}</code>
+                  ) : (
+                    <span style={{ color: "var(--accent-warning, #c9a227)" }}>belum diisi</span>
+                  )}
+                </li>
+              ) : null}
               <li>Access key: {configSummary.hasAccessKey ? "tersimpan ✓" : "belum ✗"}</li>
               <li>Secret key: {configSummary.hasSecret ? "tersimpan ✓" : "belum ✗"}</li>
             </ul>
-            <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 8, marginBottom: 0 }}>
-              Field kunci di tab Konfigurasi sengaja kosong setelah simpan (nilai tidak ditampilkan). Untuk audit perubahan,
-              {canConfigure ? (
-                <>
-                  {" "}
-                  buka{" "}
-                  <Link href="/admin/activity" style={{ color: "var(--accent)" }}>
-                    Log aktivitas
-                  </Link>
-                  .
-                </>
-              ) : (
-                " minta admin mengecek Log aktivitas."
-              )}
-            </p>
+            {distributionDescriptionError ? (
+              <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8, marginBottom: 0 }}>
+                Gagal memuat deskripsi dari AWS: {distributionDescriptionError}. Periksa permission IAM{" "}
+                <code>cloudfront:GetDistribution</code> pada distribution ini.
+              </p>
+            ) : null}
+            {!isOperator ? (
+              <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 8, marginBottom: 0 }}>
+                Field kunci di tab Konfigurasi sengaja kosong setelah simpan (nilai tidak ditampilkan). Untuk audit
+                perubahan,
+                {canConfigure ? (
+                  <>
+                    {" "}
+                    buka{" "}
+                    <Link href="/admin/activity" style={{ color: "var(--accent)" }}>
+                      Log aktivitas
+                    </Link>
+                    .
+                  </>
+                ) : (
+                  " minta admin mengecek Log aktivitas."
+                )}
+              </p>
+            ) : (
+              <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 8, marginBottom: 0 }}>
+                Distribution ID tidak ditampilkan untuk peran operator. Kunci disimpan di server; hubungi admin untuk audit
+                atau detail teknis.
+              </p>
+            )}
           </div>
 
           <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 12 }}>
@@ -356,9 +389,9 @@ export function CloudFrontInvalidationClient({
         <section className="card cloudfront-card">
           <h2 className="cloudfront-card-title">Konfigurasi AWS (IAM)</h2>
           <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 16 }}>
-            User IAM perlu permission <code>cloudfront:CreateInvalidation</code> dan <code>cloudfront:GetInvalidation</code>{" "}
-            pada distribution ini. Kunci disimpan di database aplikasi (server); setelah simpan, secret tidak ditampilkan
-            lagi — sama seperti token Cloudflare.
+            User IAM perlu permission <code>cloudfront:CreateInvalidation</code>, <code>cloudfront:GetInvalidation</code>,
+            dan <code>cloudfront:GetDistribution</code> (untuk menampilkan deskripsi distribution). Kunci disimpan di
+            database aplikasi (server); setelah simpan, secret tidak ditampilkan lagi — sama seperti token Cloudflare.
           </p>
           <p style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 16 }}>
             API CloudFront di SDK selalu memakai region <code>us-east-1</code> (syarat AWS). Field Region di bawah hanya
@@ -369,11 +402,24 @@ export function CloudFrontInvalidationClient({
             <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Ringkasan saat ini</div>
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "var(--text-secondary)" }}>
               <li>
+                Deskripsi (dari AWS):{" "}
+                {distributionDescription?.trim() ? (
+                  distributionDescription.trim()
+                ) : (
+                  <span style={{ color: "var(--text-muted)" }}>—</span>
+                )}
+              </li>
+              <li>
                 Distribution ID: {configSummary.distributionId ? <code>{configSummary.distributionId}</code> : "—"}
               </li>
               <li>Access key: {configSummary.hasAccessKey ? "tersimpan ✓" : "belum ✗"}</li>
               <li>Secret key: {configSummary.hasSecret ? "tersimpan ✓" : "belum ✗"}</li>
             </ul>
+            {distributionDescriptionError ? (
+              <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8, marginBottom: 0 }}>
+                Deskripsi gagal dimuat: {distributionDescriptionError}
+              </p>
+            ) : null}
           </div>
 
           <label className="cloudfront-field">
