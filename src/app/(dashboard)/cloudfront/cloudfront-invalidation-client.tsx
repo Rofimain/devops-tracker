@@ -116,7 +116,8 @@ export function CloudFrontInvalidationClient({
         <section className="card cloudfront-card">
           <h2 className="cloudfront-card-title">Invalidate cache (CloudFront)</h2>
           <p style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 12 }}>
-            Satu path per baris. Harus diawali <code>/</code>. Contoh: <code>/*</code> untuk semua, atau <code>/assets/*</code>.
+            Satu path per baris. Harus diawali <code>/</code>. Contoh: <code>{"/*"}</code> untuk semua, atau{" "}
+            <code>{"/assets/*"}</code>.
           </p>
           {!configured && (
             <p style={{ fontSize: 13, color: "var(--accent-warning, #c9a227)", marginBottom: 12 }}>
@@ -126,7 +127,7 @@ export function CloudFrontInvalidationClient({
           <div className="cloudfront-quick">
             <span style={{ fontSize: 12, color: "var(--text-muted)" }}>Cepat:</span>
             <button type="button" className="btn btn-sm" onClick={() => setPathsText("/*\n")}>
-              /*
+              {"/*"}
             </button>
             <button type="button" className="btn btn-sm" onClick={() => setPathsText("/index.html\n")}>
               /index.html
