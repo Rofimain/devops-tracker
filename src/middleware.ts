@@ -62,7 +62,9 @@ export async function middleware(request: NextRequest) {
 
   if (role === "OPERATOR") {
     if (path.startsWith("/purge")) return NextResponse.next();
+    if (path.startsWith("/cloudfront")) return NextResponse.next();
     if (path.startsWith("/api/cloudflare")) return NextResponse.next();
+    if (path.startsWith("/api/cloudfront")) return NextResponse.next();
     if (path.startsWith("/api/purge-presets") && request.method === "GET") {
       return NextResponse.next();
     }
@@ -76,10 +78,15 @@ export async function middleware(request: NextRequest) {
   }
 
   if (role === "MEMBER") {
-    if (path.startsWith("/purge")) {
+    if (path.startsWith("/purge") || path.startsWith("/cloudfront")) {
       return NextResponse.redirect(new URL("/", request.url));
     }
-    if (path.startsWith("/api/cloudflare") || path.startsWith("/api/purge-presets")) {
+    if (
+      path.startsWith("/api/cloudflare") ||
+      path.startsWith("/api/cloudfront") ||
+      path.startsWith("/api/settings/aws-cloudfront") ||
+      path.startsWith("/api/purge-presets")
+    ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     if (

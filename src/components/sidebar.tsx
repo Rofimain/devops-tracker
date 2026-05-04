@@ -5,7 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import type { LucideIcon } from "lucide-react";
-import { LayoutDashboard, List, Wrench, FileText, Users, Settings, LogOut, BookMarked, CloudOff, ScrollText } from "lucide-react";
+import { LayoutDashboard, List, Wrench, FileText, Users, Settings, LogOut, BookMarked, CloudOff, ScrollText, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "@/components/brand-logo";
 import { canPurgeCloudflare, isAdminRole, isSuperAdminRole } from "@/lib/roles";
@@ -31,6 +31,7 @@ const navItems: NavItem[] = [
   { kind: "link", label: "Documentation", href: "/docs", icon: FileText, visible: (r) => r !== "OPERATOR" },
   { kind: "section", label: "CDN", visible: (r) => canPurgeCloudflare(r) },
   { kind: "link", label: "Purge Cloudflare", href: "/purge", icon: CloudOff, visible: (r) => canPurgeCloudflare(r) },
+  { kind: "link", label: "CloudFront invalidation", href: "/cloudfront", icon: RefreshCw, visible: (r) => canPurgeCloudflare(r) },
   { kind: "section", label: "Admin", visible: (r) => isAdminRole(r) },
   { kind: "link", label: "Users", href: "/admin/users", icon: Users, visible: (r) => isAdminRole(r) },
   { kind: "link", label: "Log aktivitas", href: "/admin/activity", icon: ScrollText, visible: (r) => isAdminRole(r) },

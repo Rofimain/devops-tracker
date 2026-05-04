@@ -118,6 +118,7 @@ export async function ensureProjectSchema(): Promise<void> {
     await ensureLogbookTable();
     await ensureLogbookOccurredAtColumn();
     await ensureCloudflareTables();
+    await ensureCloudFrontAppConfigTable();
     await ensurePurgePresetZoneIdColumn();
     await ensureActivityAuditColumns();
   } catch (e) {
@@ -242,6 +243,25 @@ CREATE TABLE IF NOT EXISTS "PurgePreset" (
     "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "PurgePreset_pkey" PRIMARY KEY ("id")
 );
+`);
+}
+
+async function ensureCloudFrontAppConfigTable(): Promise<void> {
+  await prisma.$executeRawUnsafe(`
+CREATE TABLE IF NOT EXISTS "CloudFrontAppConfig" (
+    "id" TEXT NOT NULL,
+    "distributionId" TEXT NOT NULL DEFAULT '',
+    "accessKeyId" TEXT NOT NULL DEFAULT '',
+    "secretAccessKey" TEXT NOT NULL DEFAULT '',
+    "region" TEXT NOT NULL DEFAULT 'us-east-1',
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "CloudFrontAppConfig_pkey" PRIMARY KEY ("id")
+);
+`);
+  await prisma.$executeRawUnsafe(`
+INSERT INTO "CloudFrontAppConfig" ("id", "distributionId", "accessKeyId", "secretAccessKey", "region", "updatedAt")
+VALUES ('default', '', '', '', 'us-east-1', CURRENT_TIMESTAMP)
+ON CONFLICT ("id") DO NOTHING;
 `);
 }
 

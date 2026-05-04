@@ -178,6 +178,16 @@ model CloudflareAppConfig {
   updatedAt DateTime @updatedAt
 }
 
+/// Kredensial CloudFront invalidation (IAM: cloudfront:CreateInvalidation). Region default us-east-1 (API global).
+model CloudFrontAppConfig {
+  id              String   @id @default("default")
+  distributionId  String   @default("")
+  accessKeyId     String   @default("")
+  secretAccessKey String   @default("") @db.Text
+  region          String   @default("us-east-1")
+  updatedAt       DateTime @updatedAt
+}
+
 /// Preset body JSON purge (miri koleksi Postman).
 model PurgePreset {
   id        String   @id @default(cuid())
