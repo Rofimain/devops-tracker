@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CreateInvalidationCommand, CloudFrontClient } from "@aws-sdk/client-cloudfront";
+import {
+  CloudFrontClient,
+  CreateInvalidationCommand,
+  GetInvalidationCommand,
+} from "@aws-sdk/client-cloudfront";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -8,9 +12,58 @@ import { canPurgeCloudflare } from "@/lib/roles";
 
 const MAX_PATHS = 100;
 
+/** API kontrol CloudFront hanya valid di region ini (AWS). Nilai di DB tidak mengubah endpoint. */
+const CLOUDFRONT_API_REGION = "us-east-1";
+
 const postSchema = z.object({
   paths: z.array(z.string().min(1).max(2048)).min(1).max(MAX_PATHS),
 });
+
+function cloudFrontClient(accessKeyId: string, secretAccessKey: string) {
+  return new CloudFrontClient({
+    region: CLOUDFRONT_API_REGION,
+    credentials: { accessKeyId, secretAccessKey },
+  });
+}
+
+/** Status invalidation terbaru (polling). Query: ?id=INVALIDATION_ID */
+export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.role) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!canPurgeCloudflare(session.user.role)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  const invId = req.nextUrl.searchParams.get("id")?.trim();
+  if (!invId) return NextResponse.json({ error: "Gunakan query ?id=<invalidation_id>" }, { status: 400 });
+
+  const cfg = await prisma.cloudFrontAppConfig.findUnique({ where: { id: "default" } });
+  const distId = cfg?.distributionId?.trim() ?? "";
+  const accessKeyId = cfg?.accessKeyId?.trim() ?? "";
+  const secretAccessKey = cfg?.secretAccessKey?.trim() ?? "";
+
+  if (!distId || !accessKeyId || !secretAccessKey) {
+    return NextResponse.json({ error: "CloudFront belum dikonfigurasi." }, { status: 400 });
+  }
+
+  try {
+    const client = cloudFrontClient(accessKeyId, secretAccessKey);
+    const out = await client.send(
+      new GetInvalidationCommand({
+        DistributionId: distId,
+        Id: invId,
+      }),
+    );
+    const inv = out.Invalidation;
+    return NextResponse.json({
+      invalidationId: inv?.Id ?? invId,
+      status: inv?.Status ?? null,
+      createTime: inv?.CreateTime?.toISOString?.() ?? null,
+      pathsCount: inv?.InvalidationBatch?.Paths?.Quantity ?? null,
+    });
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : "AWS error";
+    return NextResponse.json({ error: msg }, { status: 502 });
+  }
+}
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -42,7 +95,6 @@ export async function POST(req: NextRequest) {
   const distId = cfg?.distributionId?.trim() ?? "";
   const accessKeyId = cfg?.accessKeyId?.trim() ?? "";
   const secretAccessKey = cfg?.secretAccessKey?.trim() ?? "";
-  const region = (cfg?.region?.trim() || "us-east-1").slice(0, 30);
 
   if (!distId || !accessKeyId || !secretAccessKey) {
     return NextResponse.json(
@@ -54,10 +106,7 @@ export async function POST(req: NextRequest) {
   const callerReference = `devops-tracker-${session.user.id}-${Date.now()}`;
 
   try {
-    const client = new CloudFrontClient({
-      region,
-      credentials: { accessKeyId, secretAccessKey },
-    });
+    const client = cloudFrontClient(accessKeyId, secretAccessKey);
 
     const out = await client.send(
       new CreateInvalidationCommand({
@@ -81,9 +130,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       invalidationId: invId,
-      status: out.Invalidation?.Status,
+      status: out.Invalidation?.Status ?? null,
       createTime: out.Invalidation?.CreateTime?.toISOString?.() ?? null,
-      paths: paths.length,
+      pathsSubmitted: paths.length,
+      cloudFrontApiRegion: CLOUDFRONT_API_REGION,
     });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "AWS error";

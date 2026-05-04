@@ -35,11 +35,22 @@ export default async function CloudFrontPage() {
       }
     : null;
 
+  const configSummary = {
+    distributionId: (cfg?.distributionId ?? "").trim(),
+    hasAccessKey: Boolean(cfg?.accessKeyId?.trim()),
+    hasSecret: Boolean(cfg?.secretAccessKey?.trim()),
+  };
+
   return (
     <>
       <Topbar title="CloudFront invalidation" breadcrumb="CDN" />
       <div className="app-content">
-        <CloudFrontInvalidationClient configured={configured} canConfigure={admin} initialSettings={initialSettings} />
+        <CloudFrontInvalidationClient
+          configured={configured}
+          canConfigure={admin}
+          initialSettings={initialSettings}
+          configSummary={configSummary}
+        />
       </div>
     </>
   );
