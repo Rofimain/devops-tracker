@@ -32,7 +32,11 @@ export async function middleware(request: NextRequest) {
   }
 
   const authSecret = secret();
-  const isHttps = request.nextUrl.protocol === "https:";
+  // When running behind a reverse proxy / load balancer (e.g. ingress),
+  // NextRequest may report `http:` while the browser uses `https:`.
+  // This affects NextAuth cookie selection (secure cookie vs not).
+  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const isHttps = forwardedProto === "https" || request.nextUrl.protocol === "https:";
   const token = await getToken({
     req: request,
     secret: authSecret,
