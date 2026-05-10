@@ -1,3 +1,5 @@
+import { formatAllowedDomainsDisplay } from "@/lib/allowed-email-domains";
+
 /**
  * Email undangan login (opsional).
  * Set RESEND_API_KEY + EMAIL_FROM di env. Tanpa itu, undangan tetap tersimpan di DB tanpa email.
@@ -17,8 +19,8 @@ export async function sendInviteEmail(params: {
     return { ok: false, skipped: "RESEND_API_KEY tidak di-set" };
   }
 
-  const domain = process.env.ALLOWED_EMAIL_DOMAIN ?? "";
-  const subject = `Undangan akses DevOps Tracker${domain ? ` (@${domain})` : ""}`;
+  const domainsLabel = formatAllowedDomainsDisplay();
+  const subject = `Undangan akses DevOps Tracker${domainsLabel ? ` (${domainsLabel})` : ""}`;
   const inviter = params.inviterName?.trim() || "Administrator";
   const noteBlock = params.note?.trim()
     ? `<p style="margin:16px 0 0;color:#64748b;font-size:14px">Catatan: ${escapeHtml(params.note.trim())}</p>`

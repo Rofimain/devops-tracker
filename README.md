@@ -77,5 +77,6 @@ src/
 | `NEXTAUTH_URL` | App URL (https://yourdomain.com) |
 | `GOOGLE_CLIENT_ID` | Google OAuth Client ID |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth Client Secret |
-| `ALLOWED_EMAIL_DOMAIN` | Only this domain can login (e.g. `company.com`) |
+| `ALLOWED_EMAIL_DOMAIN` | One or more allowed email domains, comma-separated (e.g. `gmv.media,gmvisual.id,sent.tv`) |
+| `ALLOWED_EMAIL_DOMAINS` | Optional extra comma-separated domains (merged with `ALLOWED_EMAIL_DOMAIN`) |
 | `SUPER_ADMIN_EMAIL` | Auto-promoted to Super Admin on first login |

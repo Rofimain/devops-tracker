@@ -1,10 +1,14 @@
 import { auth, isSuperAdmin } from "@/lib/auth";
+import { formatAllowedDomainsDisplay, getAllowedEmailDomains } from "@/lib/allowed-email-domains";
 import { Topbar } from "@/components/topbar";
 import { redirect } from "next/navigation";
 
 export default async function SettingsPage() {
   const session = await auth();
   if (!isSuperAdmin(session?.user?.role)) redirect("/");
+
+  const allowedDomainsUi = getAllowedEmailDomains().join(", ") || "—";
+  const allowedDomainsDesc = formatAllowedDomainsDisplay() || "Tidak dibatasi";
 
   return (
     <>
@@ -21,9 +25,12 @@ export default async function SettingsPage() {
                   <input className="form-input" defaultValue="DevOps Tracker" disabled />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Allowed Email Domain</label>
-                  <input className="form-input" defaultValue={process.env.ALLOWED_EMAIL_DOMAIN ?? "company.com"} disabled />
-                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>Diatur via environment variable <code style={{ fontFamily: "monospace" }}>ALLOWED_EMAIL_DOMAIN</code></div>
+                  <label className="form-label">Allowed Email Domains</label>
+                  <input className="form-input" defaultValue={allowedDomainsUi} disabled />
+                  <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+                    Diatur via <code style={{ fontFamily: "monospace" }}>ALLOWED_EMAIL_DOMAIN</code> atau daftar koma{" "}
+                    <code style={{ fontFamily: "monospace" }}>ALLOWED_EMAIL_DOMAINS</code>
+                  </div>
                 </div>
                 <div className="form-group">
                   <label className="form-label">Super Admin Email</label>
@@ -44,7 +51,7 @@ export default async function SettingsPage() {
               <div>
                 {[
                   { label: "Google OAuth Login", desc: "Login via Google Workspace", status: "Enabled" },
-                  { label: "Email Domain Restriction", desc: `Hanya @${process.env.ALLOWED_EMAIL_DOMAIN}`, status: "Active" },
+                  { label: "Email Domain Restriction", desc: `Hanya ${allowedDomainsDesc}`, status: "Active" },
                   { label: "Activity Logging", desc: "Catat semua aksi user", status: "Enabled" },
                   { label: "Session Provider", desc: "NextAuth.js v5 (Auth.js)", status: "Active" },
                 ].map((item, i, arr) => (

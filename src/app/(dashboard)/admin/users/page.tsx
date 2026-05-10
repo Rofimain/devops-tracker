@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { UserActions } from "./user-actions";
 import { ROLE_COLORS } from "@/lib/utils";
 import { timeAgo } from "@/lib/utils";
+import { formatAllowedDomainsDisplay } from "@/lib/allowed-email-domains";
 import Image from "next/image";
 
 export default async function AdminUsersPage() {
@@ -12,13 +13,20 @@ export default async function AdminUsersPage() {
   if (!isAdmin(session?.user?.role)) redirect("/");
 
   const users = await prisma.user.findMany({ orderBy: { createdAt: "asc" } });
+  const allowedLabel = formatAllowedDomainsDisplay();
 
   return (
     <>
       <Topbar title="User Management" />
       <div className="app-content">
         <div className="alert-warning">
-          Hanya email domain <strong>@{process.env.ALLOWED_EMAIL_DOMAIN}</strong> yang dapat login ke aplikasi ini.
+          {allowedLabel ? (
+            <>
+              Hanya email <strong>{allowedLabel}</strong> yang dapat login ke aplikasi ini.
+            </>
+          ) : (
+            <>Login tidak dibatasi domain email (variabel ALLOWED_EMAIL_* kosong).</>
+          )}
         </div>
 
         <div className="card">

@@ -5,8 +5,8 @@ import { prisma } from "./prisma";
 import { Role } from "@prisma/client";
 import { authConfig } from "@/auth.config";
 import { isAdminRole, isSuperAdminRole } from "@/lib/roles";
+import { isEmailFromAllowedDomain } from "@/lib/allowed-email-domains";
 
-const ALLOWED_DOMAIN = process.env.ALLOWED_EMAIL_DOMAIN ?? "";
 const SUPER_ADMIN_EMAIL = process.env.SUPER_ADMIN_EMAIL ?? "";
 
 function normalizeEmail(email: string) {
@@ -48,9 +48,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   callbacks: {
     async signIn({ user }) {
       const email = user.email ?? "";
-      if (ALLOWED_DOMAIN && !email.endsWith(`@${ALLOWED_DOMAIN}`)) {
-        return false;
-      }
+      if (!isEmailFromAllowedDomain(email)) return false;
       return true;
     },
     async jwt({ token, user }) {
