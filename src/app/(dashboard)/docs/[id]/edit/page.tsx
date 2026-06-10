@@ -27,6 +27,9 @@ export default async function EditDocPage({ params }: { params: { id: string } }
               category: doc.category ?? "",
               tags: doc.tags.join(", "),
               projectId: doc.projectId ?? "",
+              contentType: doc.contentType,
+              fileName: doc.fileName,
+              fileSize: doc.fileSize,
             }}
           />
         </div>

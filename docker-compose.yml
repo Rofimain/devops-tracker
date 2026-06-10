@@ -19,6 +19,8 @@ services:
         condition: service_healthy
     networks:
       - app_net
+    volumes:
+      - doc_uploads:/app/uploads
     # Port hanya expose ke dalam network, nginx yang handle dari luar
 
   db:
@@ -58,6 +60,8 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  doc_uploads:
     driver: local
 
 networks:

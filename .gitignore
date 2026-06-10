@@ -32,3 +32,6 @@ next-env.d.ts
 
 # prisma
 prisma/migrations/
+
+# uploaded doc files
+uploads/

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { timeAgo } from "@/lib/utils";
 import { Edit } from "lucide-react";
 import { DocDeleteButton } from "./doc-delete-button";
+import { DocContentView } from "../doc-content-view";
 
 export default async function DocDetailPage({ params }: { params: { id: string } }) {
   const session = await auth();
@@ -37,6 +38,9 @@ export default async function DocDetailPage({ params }: { params: { id: string }
                 <div style={{ fontWeight: 700, fontSize: 15 }}>{doc.title}</div>
                 <div style={{ marginTop: 6, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
                   {doc.category && <span className="badge badge-blue">{doc.category}</span>}
+                  {doc.contentType !== "TEXT" && (
+                    <span className="badge badge-gray">{doc.contentType === "PDF" ? "PDF" : "Word"}</span>
+                  )}
                   {doc.tags.map((t, i) => <span key={i} className="tag">{t}</span>)}
                   {doc.project && <Link href={`/projects/${doc.project.slug}`} className="tag" style={{ color: "var(--accent)", textDecoration: "none" }}>📁 {doc.project.name}</Link>}
                 </div>
@@ -44,7 +48,7 @@ export default async function DocDetailPage({ params }: { params: { id: string }
               </div>
             </div>
             <div className="card-body">
-              <pre style={{ whiteSpace: "pre-wrap", fontFamily: "var(--font-mono, monospace)", fontSize: 12, color: "var(--text-primary)", lineHeight: 1.7 }}>{doc.content}</pre>
+              <DocContentView doc={doc} />
             </div>
           </div>
         </div>

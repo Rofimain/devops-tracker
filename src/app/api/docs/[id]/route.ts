@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordActivity } from "@/lib/activity-log";
+import { deleteDocUpload } from "@/lib/doc-storage";
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await auth();
@@ -31,6 +32,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     userId: session.user.id,
     projectId: existing.projectId,
   });
+  await deleteDocUpload(existing.filePath);
   await prisma.doc.delete({ where: { id: params.id } });
   return NextResponse.json({ success: true });
 }

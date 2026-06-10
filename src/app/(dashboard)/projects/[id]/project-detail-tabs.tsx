@@ -233,7 +233,11 @@ export function ProjectDetailTabs({ project, canWrite = true }: { project: any; 
               <Link key={doc.id} href={`/docs/${doc.id}`} className="doc-item" style={{ display: "flex", textDecoration: "none" }}>
                 <div className="doc-icon"><FileText size={14} style={{ color: "var(--text-muted)" }} /></div>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 12, color: "var(--text-primary)" }}>{doc.title}</div>
+                  <div style={{ fontWeight: 600, fontSize: 12, color: "var(--text-primary)", display: "flex", alignItems: "center", gap: 6 }}>
+                    {doc.title}
+                    {doc.contentType === "PDF" && <span className="badge badge-gray" style={{ fontSize: 9 }}>PDF</span>}
+                    {doc.contentType === "DOCX" && <span className="badge badge-gray" style={{ fontSize: 9 }}>Word</span>}
+                  </div>
                   <div style={{ marginTop: 3 }}>
                     {doc.tags.map((t: string, i: number) => <span key={i} className="tag">{t}</span>)}
                     <span style={{ fontSize: 10, color: "var(--text-muted)", marginLeft: 6 }}>Updated {timeAgo(doc.updatedAt)}</span>

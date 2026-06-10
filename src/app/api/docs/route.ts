@@ -16,7 +16,14 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const doc = await prisma.doc.create({
-      data: { title: body.title, content: body.content, category: body.category || null, tags: body.tags || [], projectId: body.projectId || null },
+      data: {
+        title: body.title,
+        content: body.content ?? "",
+        contentType: "TEXT",
+        category: body.category || null,
+        tags: body.tags || [],
+        projectId: body.projectId || null,
+      },
     });
     await recordActivity(req, {
       action: "ADD_DOC",

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { slugify } from "@/lib/utils";
 import { CreatableSelect } from "@/components/creatable-select";
+import { CommaSeparatedInput } from "@/components/comma-separated-input";
 import { emptyInfraRow, type InfraFormRow, orderInfraRows } from "@/lib/project-infra";
 import { ProjectInfraFields } from "./project-infra-fields";
 import { ProjectToolsDocsPicker } from "./project-tools-docs-picker";
@@ -98,10 +99,6 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
   });
 
   const set = (k: keyof ProjectFormData, v: any) => setForm((f) => ({ ...f, [k]: v }));
-
-  const handleArrayInput = (key: keyof ProjectFormData, value: string) => {
-    set(key, value.split(",").map((s) => s.trim()).filter(Boolean));
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -203,10 +200,9 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
               <label className="form-label">
                 Platform / Tech Stack <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(pisah dengan koma)</span>
               </label>
-              <input
-                className="form-input"
-                defaultValue={(form.platform ?? []).join(", ")}
-                onChange={(e) => handleArrayInput("platform", e.target.value)}
+              <CommaSeparatedInput
+                value={form.platform ?? []}
+                onChange={(items) => set("platform", items)}
                 placeholder="Next.js 14, Node 20, TypeScript"
               />
             </div>

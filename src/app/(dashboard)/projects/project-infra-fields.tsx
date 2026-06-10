@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CommaSeparatedInput } from "@/components/comma-separated-input";
 import { InfraFormRow, PRESET_ENVIRONMENTS, emptyInfraRow, orderInfraRows } from "@/lib/project-infra";
 
 function togglePreset(
@@ -58,8 +59,8 @@ export function ProjectInfraFields({
     setHint("");
   };
 
-  const handleArray = (envName: string, key: "hosting" | "cdn" | "databases", value: string) => {
-    onChange(updateRow(ordered, envName, { [key]: value.split(",").map((s) => s.trim()).filter(Boolean) }));
+  const handleArray = (envName: string, key: "hosting" | "cdn" | "databases", items: string[]) => {
+    onChange(updateRow(ordered, envName, { [key]: items }));
   };
 
   return (
@@ -157,10 +158,9 @@ export function ProjectInfraFields({
                   <label className="form-label">
                     Hosting <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(pisah koma)</span>
                   </label>
-                  <input
-                    className="form-input"
-                    value={row.hosting.join(", ")}
-                    onChange={(e) => handleArray(row.envName, "hosting", e.target.value)}
+                  <CommaSeparatedInput
+                    value={row.hosting}
+                    onChange={(items) => handleArray(row.envName, "hosting", items)}
                     placeholder="AWS EC2 t3.medium"
                   />
                 </div>
@@ -168,10 +168,9 @@ export function ProjectInfraFields({
                   <label className="form-label">
                     CDN / Proxy <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(pisah koma)</span>
                   </label>
-                  <input
-                    className="form-input"
-                    value={row.cdn.join(", ")}
-                    onChange={(e) => handleArray(row.envName, "cdn", e.target.value)}
+                  <CommaSeparatedInput
+                    value={row.cdn}
+                    onChange={(items) => handleArray(row.envName, "cdn", items)}
                     placeholder="Cloudflare"
                   />
                 </div>
@@ -179,10 +178,9 @@ export function ProjectInfraFields({
                   <label className="form-label">
                     Database <span style={{ fontWeight: 400, color: "var(--text-muted)" }}>(pisah koma)</span>
                   </label>
-                  <input
-                    className="form-input"
-                    value={row.databases.join(", ")}
-                    onChange={(e) => handleArray(row.envName, "databases", e.target.value)}
+                  <CommaSeparatedInput
+                    value={row.databases}
+                    onChange={(items) => handleArray(row.envName, "databases", items)}
                     placeholder="PostgreSQL 16, Redis 7"
                   />
                 </div>

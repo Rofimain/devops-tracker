@@ -124,16 +124,27 @@ model ProjectTool {
   @@unique([projectId, toolId])
 }
 
+enum DocContentType {
+  TEXT
+  PDF
+  DOCX
+}
+
 model Doc {
-  id        String   @id @default(cuid())
-  title     String
-  content   String
-  category  String?
-  tags      String[]
-  projectId String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  project   Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  id          String         @id @default(cuid())
+  title       String
+  content     String         @default("")
+  contentType DocContentType @default(TEXT)
+  fileName    String?
+  filePath    String?
+  mimeType    String?
+  fileSize    Int?
+  category    String?
+  tags        String[]
+  projectId   String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  project     Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
 }
 
 model Activity {
