@@ -3,6 +3,7 @@ import { canWriteAppData } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/topbar";
 import Link from "next/link";
+import { displayExternalUrl, displayRepoUrl, normalizeExternalUrl } from "@/lib/external-url";
 import { statusBadgeClass, statusLabel, webBasedBadgeClass } from "@/lib/utils";
 import { Plus, Search } from "lucide-react";
 import { ProjectFilters } from "./project-filters";
@@ -110,8 +111,8 @@ export default async function ProjectsPage({
                       </td>
                       <td>
                         {p.url ? (
-                          <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", fontSize: 11 }}>
-                            {p.url.replace(/^https?:\/\//, "")}
+                          <a href={normalizeExternalUrl(p.url)!} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", fontSize: 11 }}>
+                            {displayExternalUrl(p.url)}
                           </a>
                         ) : <span style={{ color: "var(--text-muted)" }}>—</span>}
                       </td>
@@ -154,8 +155,8 @@ export default async function ProjectsPage({
                       </td>
                       <td>
                         {p.repoUrl ? (
-                          <a href={p.repoUrl} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", fontSize: 11 }}>
-                            {p.repoUrl.replace("https://github.com/", "github/")}
+                          <a href={normalizeExternalUrl(p.repoUrl)!} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", fontSize: 11 }}>
+                            {displayRepoUrl(p.repoUrl)}
                           </a>
                         ) : <span style={{ color: "var(--text-muted)" }}>—</span>}
                       </td>

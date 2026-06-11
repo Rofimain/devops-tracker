@@ -3,6 +3,7 @@
 import { Fragment, useState } from "react";
 import Link from "next/link";
 import { TOOL_CATEGORY_COLORS, timeAgo, statusBadgeClass, statusLabel, webBasedBadgeClass } from "@/lib/utils";
+import { displayExternalUrl, displayRepoUrl, normalizeExternalUrl } from "@/lib/external-url";
 import { FileText, Plus, ExternalLink } from "lucide-react";
 
 export function ProjectDetailTabs({ project, canWrite = true }: { project: any; canWrite?: boolean }) {
@@ -30,7 +31,18 @@ export function ProjectDetailTabs({ project, canWrite = true }: { project: any; 
           <div className="card">
             <div className="card-header"><span className="card-title">Info Project</span></div>
             <div className="info-row"><span className="info-label">Site Name</span><span className="info-value">{project.name}</span></div>
-            <div className="info-row"><span className="info-label">URL</span><span className="info-value" style={{ color: "var(--accent)" }}>{project.url || "—"}</span></div>
+            <div className="info-row">
+              <span className="info-label">URL</span>
+              <span className="info-value">
+                {project.url ? (
+                  <a href={normalizeExternalUrl(project.url)!} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
+                    {displayExternalUrl(project.url)}
+                  </a>
+                ) : (
+                  "—"
+                )}
+              </span>
+            </div>
             <div className="info-row"><span className="info-label">Category</span><span className="info-value">{project.category ? <span className="badge badge-blue">{project.category}</span> : "—"}</span></div>
             <div className="info-row"><span className="info-label">Management</span><span className="info-value">{project.management || "—"}</span></div>
             <div className="info-row">
@@ -40,7 +52,18 @@ export function ProjectDetailTabs({ project, canWrite = true }: { project: any; 
               </span>
             </div>
             <div className="info-row"><span className="info-label">Platform</span><span className="info-value">{(project.platform ?? []).map((t: string, i: number) => <span key={i} className="tag">{t}</span>)}</span></div>
-            <div className="info-row"><span className="info-label">Repository</span><span className="info-value" style={{ color: "var(--accent)" }}>{project.repoUrl || "—"}</span></div>
+            <div className="info-row">
+              <span className="info-label">Repository</span>
+              <span className="info-value">
+                {project.repoUrl ? (
+                  <a href={normalizeExternalUrl(project.repoUrl)!} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
+                    {displayRepoUrl(project.repoUrl)}
+                  </a>
+                ) : (
+                  "—"
+                )}
+              </span>
+            </div>
             <div className="info-row">
               <span className="info-label">Cost / Month</span>
               <span className="info-value">{project.costPerMonth?.trim() ? project.costPerMonth : "—"}</span>

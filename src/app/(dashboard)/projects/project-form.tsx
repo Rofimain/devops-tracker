@@ -6,6 +6,7 @@ import { slugify } from "@/lib/utils";
 import { CreatableSelect } from "@/components/creatable-select";
 import { CommaSeparatedInput } from "@/components/comma-separated-input";
 import { emptyInfraRow, type InfraFormRow, orderInfraRows } from "@/lib/project-infra";
+import { normalizeExternalUrl } from "@/lib/external-url";
 import { ProjectInfraFields } from "./project-infra-fields";
 import { ProjectToolsDocsPicker } from "./project-tools-docs-picker";
 
@@ -114,6 +115,8 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
       const payload = {
         ...form,
         slug,
+        url: normalizeExternalUrl(form.url),
+        repoUrl: normalizeExternalUrl(form.repoUrl),
         infras,
         toolIds: form.toolIds ?? [],
         docIds: form.docIds ?? [],

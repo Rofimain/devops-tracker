@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/topbar";
 import Link from "next/link";
 import { statusBadgeClass, statusLabel, TOOL_CATEGORY_COLORS, timeAgo } from "@/lib/utils";
+import { displayExternalUrl, displayRepoUrl, normalizeExternalUrl } from "@/lib/external-url";
 import { ProjectDetailTabs } from "./project-detail-tabs";
 import { Edit, Plus, ExternalLink } from "lucide-react";
 import { ProjectDeleteButton } from "./project-delete-button";
@@ -53,8 +54,18 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 3 }}>{project.name}</div>
             <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 10 }}>{project.description ?? "No description."}</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {project.url && <a href={project.url} target="_blank" rel="noopener noreferrer" className="tag" style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 3 }}>🌐 {project.url.replace(/^https?:\/\//, "")}<ExternalLink size={9} /></a>}
-              {project.repoUrl && <a href={project.repoUrl} target="_blank" rel="noopener noreferrer" className="tag" style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 3 }}>📦 {project.repoUrl.replace("https://github.com/", "")}<ExternalLink size={9} /></a>}
+              {project.url && (
+                <a href={normalizeExternalUrl(project.url)!} target="_blank" rel="noopener noreferrer" className="tag" style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 3 }}>
+                  🌐 {displayExternalUrl(project.url)}
+                  <ExternalLink size={9} />
+                </a>
+              )}
+              {project.repoUrl && (
+                <a href={normalizeExternalUrl(project.repoUrl)!} target="_blank" rel="noopener noreferrer" className="tag" style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 3 }}>
+                  📦 {displayRepoUrl(project.repoUrl)}
+                  <ExternalLink size={9} />
+                </a>
+              )}
               {(project.infras ?? [])[0]?.hosting?.[0] && <span className="tag">🖥 {(project.infras ?? [])[0].hosting[0]}</span>}
               {project.costPerMonth?.trim() && <span className="tag">💰 {project.costPerMonth}</span>}
               {project.management && <span className="tag">👤 {project.management}</span>}

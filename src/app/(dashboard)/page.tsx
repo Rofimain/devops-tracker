@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/topbar";
 import Link from "next/link";
 import { timeAgo, statusBadgeClass, statusLabel } from "@/lib/utils";
+import { displayExternalUrl } from "@/lib/external-url";
 import { Plus } from "lucide-react";
 
 export default async function DashboardPage() {
@@ -151,7 +152,7 @@ export default async function DashboardPage() {
                       <tr key={p.id}>
                         <td>
                           <Link href={`/projects/${p.slug}`} style={{ fontWeight: 600, color: "var(--text-primary)", textDecoration: "none" }}>{p.name}</Link>
-                          {p.url && <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{p.url.replace("https://", "").replace("http://", "")}</div>}
+                          {p.url && <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{displayExternalUrl(p.url)}</div>}
                         </td>
                         <td>{(p.platform ?? []).slice(0, 2).map((t, i) => <span key={i} className="tag">{t}</span>)}</td>
                         <td>

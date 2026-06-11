@@ -122,6 +122,7 @@ export async function ensureProjectSchema(): Promise<void> {
     await ensurePurgePresetZoneIdColumn();
     await ensureActivityAuditColumns();
     await ensureDocSchema();
+    await ensureProjectExternalUrls();
   } catch (e) {
     console.error("[ensureProjectSchema] gagal menyelaraskan DB:", e);
   }
@@ -419,4 +420,26 @@ END $$;
 
   await prisma.$executeRawUnsafe(`ALTER TABLE "Doc" ALTER COLUMN "content" SET DEFAULT '';`);
   await prisma.$executeRawUnsafe(`UPDATE "Doc" SET "content" = '' WHERE "content" IS NULL;`);
+}
+
+/** URL project tanpa skema (sla.example.com) disimpan sebagai https://... */
+async function ensureProjectExternalUrls(): Promise<void> {
+  await prisma.$executeRawUnsafe(`
+    UPDATE "Project"
+    SET "url" = 'https://' || trim("url")
+    WHERE "url" IS NOT NULL
+      AND trim("url") <> ''
+      AND "url" NOT LIKE 'http://%'
+      AND "url" NOT LIKE 'https://%'
+      AND "url" NOT LIKE '%:%'
+  `);
+  await prisma.$executeRawUnsafe(`
+    UPDATE "Project"
+    SET "repoUrl" = 'https://' || trim("repoUrl")
+    WHERE "repoUrl" IS NOT NULL
+      AND trim("repoUrl") <> ''
+      AND "repoUrl" NOT LIKE 'http://%'
+      AND "repoUrl" NOT LIKE 'https://%'
+      AND "repoUrl" NOT LIKE '%:%'
+  `);
 }

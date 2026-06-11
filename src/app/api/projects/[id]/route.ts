@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordActivity } from "@/lib/activity-log";
 import { normalizeCostPerMonth } from "@/lib/utils";
+import { normalizeExternalUrl } from "@/lib/external-url";
 import { parseInfrasFromBody } from "@/lib/project-infra";
 
 function parseIdArray(v: unknown): string[] {
@@ -42,8 +43,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           name: body.name,
           slug: body.slug,
           description: body.description || null,
-          url: body.url || null,
-          repoUrl: body.repoUrl || null,
+          url: normalizeExternalUrl(body.url),
+          repoUrl: normalizeExternalUrl(body.repoUrl),
           category: body.category || null,
           management: body.management || null,
           status: body.status,
