@@ -121,6 +121,7 @@ export async function ensureProjectSchema(): Promise<void> {
     await ensureCloudFrontAppConfigTable();
     await ensurePurgePresetZoneIdColumn();
     await ensureActivityAuditColumns();
+    await ensureDocSchema();
   } catch (e) {
     console.error("[ensureProjectSchema] gagal menyelaraskan DB:", e);
   }
@@ -379,4 +380,43 @@ FROM "Project" p
 WHERE NOT EXISTS (SELECT 1 FROM "ProjectInfra" x WHERE x."projectId" = p."id");
 `);
   }
+}
+
+/** Kolom upload PDF/DOCX pada Doc (deploy tanpa migration file). */
+async function ensureDocSchema(): Promise<void> {
+  const tableExistsRows = await prisma.$queryRaw<[{ exists: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'Doc'
+    ) AS "exists"
+  `;
+  if (!Boolean(tableExistsRows[0]?.exists)) return;
+
+  await prisma.$executeRawUnsafe(`
+DO $$ BEGIN
+  CREATE TYPE "DocContentType" AS ENUM ('TEXT', 'PDF', 'DOCX');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+`);
+
+  const contentTypeRows = await prisma.$queryRaw<[{ exists: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'public' AND table_name = 'Doc' AND column_name = 'contentType'
+    ) AS "exists"
+  `;
+  if (!Boolean(contentTypeRows[0]?.exists)) {
+    await prisma.$executeRawUnsafe(
+      `ALTER TABLE "Doc" ADD COLUMN "contentType" "DocContentType" NOT NULL DEFAULT 'TEXT';`
+    );
+  }
+
+  await prisma.$executeRawUnsafe(`ALTER TABLE "Doc" ADD COLUMN IF NOT EXISTS "fileName" TEXT;`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "Doc" ADD COLUMN IF NOT EXISTS "filePath" TEXT;`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "Doc" ADD COLUMN IF NOT EXISTS "mimeType" TEXT;`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "Doc" ADD COLUMN IF NOT EXISTS "fileSize" INTEGER;`);
+
+  await prisma.$executeRawUnsafe(`ALTER TABLE "Doc" ALTER COLUMN "content" SET DEFAULT '';`);
+  await prisma.$executeRawUnsafe(`UPDATE "Doc" SET "content" = '' WHERE "content" IS NULL;`);
 }

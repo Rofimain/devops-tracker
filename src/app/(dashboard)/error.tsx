@@ -20,9 +20,9 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
         {detail}
       </div>
       <p style={{ fontSize: 11, color: "var(--text-hint)", maxWidth: 420, margin: "0 auto 20px", lineHeight: 1.45 }}>
-        Penyebab umum setelah deploy: tabel database belum termigrasi (mis. <code className="mono">LogbookEntry</code>), koneksi DB, atau variabel
-        lingkungan yang hilang. GitHub Actions yang hanya build image tidak otomatis menjalankan{" "}
-        <code className="mono">prisma migrate deploy</code> ke database produksi.
+        Penyebab umum setelah deploy: tabel/kolom database belum selaras dengan kode (mis.{" "}
+        <code className="mono">Doc.contentType</code>, <code className="mono">LogbookEntry</code>), koneksi DB, atau variabel
+        lingkungan yang hilang. Deploy menjalankan <code className="mono">prisma db push</code>; restart app jika error masih muncul.
       </p>
       <button type="button" className="btn btn-primary" onClick={reset}>
         Coba Lagi
