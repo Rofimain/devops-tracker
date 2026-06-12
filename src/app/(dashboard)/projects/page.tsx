@@ -3,9 +3,9 @@ import { canWriteAppData } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/topbar";
 import Link from "next/link";
-import { displayExternalUrl, displayRepoUrl, normalizeExternalUrl } from "@/lib/external-url";
-import { statusBadgeClass, statusLabel, webBasedBadgeClass } from "@/lib/utils";
-import { Plus, Search } from "lucide-react";
+import { displayExternalUrl, normalizeExternalUrl } from "@/lib/external-url";
+import { statusBadgeClass, statusLabel } from "@/lib/utils";
+import { Plus } from "lucide-react";
 import { ProjectFilters } from "./project-filters";
 
 export default async function ProjectsPage({
@@ -30,13 +30,25 @@ export default async function ProjectsPage({
     prisma.project.findMany({
       where,
       orderBy: { updatedAt: "desc" },
-      include: { _count: { select: { tools: true, docs: true } }, infras: { orderBy: { sortOrder: "asc" } } },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        url: true,
+        description: true,
+        category: true,
+        management: true,
+        status: true,
+      },
     }),
     prisma.project.groupBy({ by: ["status"], _count: { id: true } }),
   ]);
 
   const countMap: Record<string, number> = { ALL: 0 };
-  counts.forEach((c) => { countMap[c.status] = c._count.id; countMap.ALL += c._count.id; });
+  counts.forEach((c) => {
+    countMap[c.status] = c._count.id;
+    countMap.ALL += c._count.id;
+  });
 
   const presetOrder = ["ACTIVE", "MAINTENANCE", "DEPRECATED", "PLANNING"];
   const distinctStatuses = counts.map((c) => c.status).filter(Boolean);
@@ -70,36 +82,37 @@ export default async function ProjectsPage({
         <div className="card">
           <div className="card-header">
             <span className="card-title">Semua Projects</span>
-            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>{projects.length} project{projects.length !== 1 ? "s" : ""} terdaftar</span>
+            <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
+              {projects.length} project{projects.length !== 1 ? "s" : ""} terdaftar
+            </span>
           </div>
           <div className="table-wrap">
             <table className="data-table">
               <thead>
                 <tr>
-                  <th style={{ width: 32 }}>No.</th>
+                  <th style={{ width: 40 }}>No.</th>
                   <th>Site Name</th>
                   <th>URL</th>
-                  <th style={{ maxWidth: 180 }}>Description</th>
+                  <th style={{ minWidth: 160 }}>Description</th>
                   <th>Category</th>
                   <th>Management</th>
                   <th>Status</th>
-                  <th>Platform / Tech</th>
-                  <th className="col-infra">Web App</th>
-                  <th className="col-infra">Environment</th>
-                  <th className="col-infra">Target Group</th>
-                  <th className="col-infra">Load Balancer</th>
-                  <th className="col-infra">Hosting / CDN</th>
-                  <th className="col-infra">Database</th>
-                  <th>Repository</th>
-                  <th>Cost/mo</th>
-                  <th></th>
+                  <th style={{ width: 120 }}>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {projects.length === 0 ? (
                   <tr>
-                    <td colSpan={17} style={{ textAlign: "center", padding: "40px 0", color: "var(--text-muted)" }}>
-                      Belum ada project.{canWrite ? <> <Link href="/projects/new" style={{ color: "var(--accent)" }}>Tambah project pertama →</Link></> : null}
+                    <td colSpan={8} style={{ textAlign: "center", padding: "40px 0", color: "var(--text-muted)" }}>
+                      Belum ada project.
+                      {canWrite ? (
+                        <>
+                          {" "}
+                          <Link href="/projects/new" style={{ color: "var(--accent)" }}>
+                            Tambah project pertama →
+                          </Link>
+                        </>
+                      ) : null}
                     </td>
                   </tr>
                 ) : (
@@ -107,64 +120,52 @@ export default async function ProjectsPage({
                     <tr key={p.id}>
                       <td style={{ color: "var(--text-muted)" }}>{i + 1}</td>
                       <td>
-                        <Link href={`/projects/${p.slug}`} style={{ fontWeight: 600, color: "var(--text-primary)", textDecoration: "none", whiteSpace: "nowrap" }}>{p.name}</Link>
+                        <Link
+                          href={`/projects/${p.slug}`}
+                          style={{ fontWeight: 600, color: "var(--text-primary)", textDecoration: "none" }}
+                        >
+                          {p.name}
+                        </Link>
                       </td>
                       <td>
                         {p.url ? (
-                          <a href={normalizeExternalUrl(p.url)!} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", fontSize: 11 }}>
+                          <a
+                            href={normalizeExternalUrl(p.url)!}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ color: "var(--accent)", fontSize: 12 }}
+                          >
                             {displayExternalUrl(p.url)}
                           </a>
-                        ) : <span style={{ color: "var(--text-muted)" }}>—</span>}
+                        ) : (
+                          <span style={{ color: "var(--text-muted)" }}>—</span>
+                        )}
                       </td>
-                      <td style={{ maxWidth: 180, whiteSpace: "normal", fontSize: 11, color: "var(--text-muted)" }}>{p.description ?? "—"}</td>
+                      <td style={{ maxWidth: 220, whiteSpace: "normal", fontSize: 12, color: "var(--text-secondary)" }}>
+                        {p.description?.trim() ? p.description : "—"}
+                      </td>
                       <td>
-                        {p.category ? <span className="badge badge-blue">{p.category}</span> : <span style={{ color: "var(--text-muted)" }}>—</span>}
+                        {p.category ? (
+                          <span className="badge badge-blue">{p.category}</span>
+                        ) : (
+                          <span style={{ color: "var(--text-muted)" }}>—</span>
+                        )}
                       </td>
-                      <td style={{ fontSize: 12 }}>{p.management ?? "—"}</td>
+                      <td style={{ fontSize: 12 }}>{p.management?.trim() ? p.management : "—"}</td>
                       <td>
                         <span className={`badge ${statusBadgeClass(p.status)}`}>{statusLabel(p.status)}</span>
                       </td>
-                      <td>{(p.platform ?? []).map((t, j) => <span key={j} className="tag">{t}</span>)}</td>
-                      <td className="col-infra">
-                        <span className={`badge ${webBasedBadgeClass(p.webBasedApp)}`}>{p.webBasedApp}</span>
-                      </td>
-                      <td className="col-infra">
-                        {(p.infras ?? []).length === 0 ? (
-                          "—"
-                        ) : (
-                          (p.infras ?? []).map((inf) => (
-                            <span key={inf.id} className="badge badge-blue" style={{ marginRight: 4, marginBottom: 4, fontSize: 10, textTransform: "capitalize" }}>
-                              {inf.envName}
-                            </span>
-                          ))
-                        )}
-                      </td>
-                      <td className="col-infra mono">{(p.infras ?? [])[0]?.targetGroup || "—"}</td>
-                      <td className="col-infra mono">{(p.infras ?? [])[0]?.loadBalancer || "—"}</td>
-                      <td className="col-infra">
-                        {(p.infras ?? []).length === 0
-                          ? "—"
-                          : [...((p.infras ?? [])[0]?.hosting ?? []), ...((p.infras ?? [])[0]?.cdn ?? [])].map((h, j) => <span key={j} className="tag">{h}</span>)}
-                      </td>
-                      <td className="col-infra">
-                        {(p.infras ?? []).length === 0
-                          ? "—"
-                          : ((p.infras ?? [])[0]?.databases ?? []).length === 0
-                            ? "—"
-                            : ((p.infras ?? [])[0]?.databases ?? []).map((d, j) => <span key={j} className="tag">{d}</span>)}
-                      </td>
                       <td>
-                        {p.repoUrl ? (
-                          <a href={normalizeExternalUrl(p.repoUrl)!} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)", fontSize: 11 }}>
-                            {displayRepoUrl(p.repoUrl)}
-                          </a>
-                        ) : <span style={{ color: "var(--text-muted)" }}>—</span>}
-                      </td>
-                      <td style={{ fontWeight: 600 }}>
-                        {p.costPerMonth?.trim() ? p.costPerMonth : "—"}
-                      </td>
-                      <td>
-                        <Link href={`/projects/${p.slug}`} className="btn btn-sm">Detail</Link>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          <Link href={`/projects/${p.slug}`} className="btn btn-sm">
+                            Detail
+                          </Link>
+                          {canWrite ? (
+                            <Link href={`/projects/${p.slug}/edit`} className="btn btn-sm">
+                              Edit
+                            </Link>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   ))
