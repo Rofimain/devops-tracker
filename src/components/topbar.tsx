@@ -1,18 +1,26 @@
 import { ThemeToggle } from "./theme-toggle";
+import Link from "next/link";
 
 interface TopbarProps {
   title: string;
   breadcrumb?: string;
+  breadcrumbHref?: string;
   action?: React.ReactNode;
 }
 
-export function Topbar({ title, breadcrumb, action }: TopbarProps) {
+export function Topbar({ title, breadcrumb, breadcrumbHref, action }: TopbarProps) {
   return (
     <div className="app-topbar">
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px 8px", minWidth: 0, flex: "1 1 120px" }}>
         {breadcrumb && (
           <>
-            <span style={{ color: "var(--text-muted)", fontSize: 12 }}>{breadcrumb}</span>
+            {breadcrumbHref ? (
+              <Link href={breadcrumbHref} style={{ color: "var(--text-muted)", fontSize: 12, textDecoration: "none" }}>
+                {breadcrumb}
+              </Link>
+            ) : (
+              <span style={{ color: "var(--text-muted)", fontSize: 12 }}>{breadcrumb}</span>
+            )}
             <span style={{ color: "var(--text-hint)", fontSize: 12 }}>/</span>
           </>
         )}

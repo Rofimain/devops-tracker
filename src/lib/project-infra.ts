@@ -5,6 +5,7 @@ export type InfraFormRow = {
   targetGroup: string;
   loadBalancer: string;
   serverIp: string;
+  url: string;
   hosting: string[];
   cdn: string[];
   databases: string[];
@@ -20,6 +21,7 @@ export function emptyInfraRow(envName: string): InfraFormRow {
     targetGroup: "",
     loadBalancer: "",
     serverIp: "",
+    url: "",
     hosting: [],
     cdn: [],
     databases: [],
@@ -50,6 +52,7 @@ export function parseInfrasFromBody(body: unknown): InfraFormRow[] {
     targetGroup: row?.targetGroup != null ? String(row.targetGroup) : "",
     loadBalancer: row?.loadBalancer != null ? String(row.loadBalancer) : "",
     serverIp: row?.serverIp != null ? String(row.serverIp) : "",
+    url: row?.url != null ? String(row.url) : "",
     hosting: Array.isArray(row?.hosting) ? row.hosting.map(String) : typeof row?.hosting === "string" ? row.hosting.split(",").map((s: string) => s.trim()).filter(Boolean) : [],
     cdn: Array.isArray(row?.cdn) ? row.cdn.map(String) : typeof row?.cdn === "string" ? row.cdn.split(",").map((s: string) => s.trim()).filter(Boolean) : [],
     databases: Array.isArray(row?.databases)

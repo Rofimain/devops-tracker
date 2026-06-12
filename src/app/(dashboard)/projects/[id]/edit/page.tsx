@@ -32,6 +32,7 @@ export default async function EditProjectPage({ params }: { params: { id: string
       targetGroup: r.targetGroup ?? "",
       loadBalancer: r.loadBalancer ?? "",
       serverIp: r.serverIp ?? "",
+      url: r.url ?? (r.envName.toLowerCase() === "production" ? (project.url ?? "") : ""),
       hosting: r.hosting ?? [],
       cdn: r.cdn ?? [],
       databases: r.databases ?? [],
@@ -40,7 +41,7 @@ export default async function EditProjectPage({ params }: { params: { id: string
 
   return (
     <>
-      <Topbar title={`Edit: ${project.name}`} breadcrumb="Projects" />
+      <Topbar title={`Edit: ${project.name}`} breadcrumb="Projects" breadcrumbHref="/projects" />
       <div className="app-content">
         <div style={{ maxWidth: 760, margin: "0 auto" }}>
           <ProjectForm mode="edit" defaultValues={defaultValues} />

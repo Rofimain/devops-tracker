@@ -5,7 +5,7 @@ import Link from "next/link";
 export default function NewProjectPage() {
   return (
     <>
-      <Topbar title="New Project" breadcrumb="Projects" />
+      <Topbar title="New Project" breadcrumb="Projects" breadcrumbHref="/projects" />
       <div className="app-content">
         <div style={{ maxWidth: 760, margin: "0 auto" }}>
           <ProjectForm mode="create" />

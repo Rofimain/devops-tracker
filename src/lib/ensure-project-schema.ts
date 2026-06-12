@@ -456,4 +456,5 @@ async function ensureProjectInfraCostColumns(): Promise<void> {
 
   await prisma.$executeRawUnsafe(`ALTER TABLE "ProjectInfra" ADD COLUMN IF NOT EXISTS "costItems" JSONB;`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "ProjectInfra" ADD COLUMN IF NOT EXISTS "costNotes" TEXT;`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "ProjectInfra" ADD COLUMN IF NOT EXISTS "url" TEXT;`);
 }

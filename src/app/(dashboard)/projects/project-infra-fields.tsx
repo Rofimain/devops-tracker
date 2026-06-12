@@ -127,6 +127,21 @@ export function ProjectInfraFields({
             </div>
             <div className="card-body" style={{ paddingTop: 0 }}>
               <div className="grid-2">
+                <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+                  <label className="form-label">
+                    URL <span style={{ fontWeight: 400, color: "var(--text-muted)", textTransform: "capitalize" }}>({row.envName})</span>
+                  </label>
+                  <input
+                    className="form-input"
+                    value={row.url}
+                    onChange={(e) => onChange(updateRow(ordered, row.envName, { url: e.target.value }))}
+                    placeholder={
+                      row.envName.toLowerCase() === "production"
+                        ? "https://portal.company.com"
+                        : `https://${row.envName}.company.com`
+                    }
+                  />
+                </div>
                 <div className="form-group">
                   <label className="form-label">Target Group</label>
                   <input

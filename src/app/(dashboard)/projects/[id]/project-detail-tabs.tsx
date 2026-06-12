@@ -4,6 +4,7 @@ import { Fragment, useState } from "react";
 import Link from "next/link";
 import { TOOL_CATEGORY_COLORS, timeAgo, statusBadgeClass, statusLabel, webBasedBadgeClass } from "@/lib/utils";
 import { displayExternalUrl, displayRepoUrl, normalizeExternalUrl } from "@/lib/external-url";
+import { envUrlLabel, resolveInfraUrl } from "@/lib/project-env-url";
 import { formatUsd, parseCostLineItems, sumCostItems } from "@/lib/project-cost";
 import { FileText, Plus, ExternalLink } from "lucide-react";
 import { ProjectCostTab } from "./project-cost-tab";
@@ -39,18 +40,38 @@ export function ProjectDetailTabs({ project, canWrite = true }: { project: any; 
           <div className="card">
             <div className="card-header"><span className="card-title">Info Project</span></div>
             <div className="info-row"><span className="info-label">Site Name</span><span className="info-value">{project.name}</span></div>
-            <div className="info-row">
-              <span className="info-label">URL</span>
-              <span className="info-value">
-                {project.url ? (
-                  <a href={normalizeExternalUrl(project.url)!} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
-                    {displayExternalUrl(project.url)}
-                  </a>
-                ) : (
-                  "—"
-                )}
-              </span>
-            </div>
+            {(project.infras ?? []).length > 0 ? (
+              (project.infras ?? []).map((inf: any) => {
+                const href = resolveInfraUrl(inf.envName, inf.url, project.url);
+                return (
+                  <div key={inf.id ?? inf.envName} className="info-row">
+                    <span className="info-label">{envUrlLabel(inf.envName)}</span>
+                    <span className="info-value">
+                      {href ? (
+                        <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
+                          {displayExternalUrl(href)}
+                        </a>
+                      ) : (
+                        "—"
+                      )}
+                    </span>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="info-row">
+                <span className="info-label">URL (Production)</span>
+                <span className="info-value">
+                  {project.url ? (
+                    <a href={normalizeExternalUrl(project.url)!} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
+                      {displayExternalUrl(project.url)}
+                    </a>
+                  ) : (
+                    "—"
+                  )}
+                </span>
+              </div>
+            )}
             <div className="info-row"><span className="info-label">Category</span><span className="info-value">{project.category ? <span className="badge badge-blue">{project.category}</span> : "—"}</span></div>
             <div className="info-row"><span className="info-label">Management</span><span className="info-value">{project.management || "—"}</span></div>
             <div className="info-row">

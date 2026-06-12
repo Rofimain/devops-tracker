@@ -2,11 +2,12 @@ import { notFound } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { canWriteAppData } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
-import { Topbar } from "@/components/topbar";
 import Link from "next/link";
-import { statusBadgeClass, statusLabel, TOOL_CATEGORY_COLORS, timeAgo } from "@/lib/utils";
+import { statusBadgeClass, statusLabel } from "@/lib/utils";
 import { displayExternalUrl, displayRepoUrl, normalizeExternalUrl } from "@/lib/external-url";
+import { resolveInfraUrl } from "@/lib/project-env-url";
 import { ProjectDetailTabs } from "./project-detail-tabs";
+import { ProjectDetailTopbar } from "./project-detail-topbar";
 import { Edit, Plus, ExternalLink } from "lucide-react";
 import { ProjectDeleteButton } from "./project-delete-button";
 
@@ -14,24 +15,29 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   const session = await auth();
   const canWrite = canWriteAppData(session?.user?.role);
 
-  const project = await prisma.project.findUnique({
-    where: { slug: params.id },
-    include: {
-      infras: { orderBy: { sortOrder: "asc" } },
-      tools: { include: { tool: true }, orderBy: { createdAt: "asc" } },
-      docs: { orderBy: { updatedAt: "desc" } },
-      activities: { take: 20, orderBy: { createdAt: "desc" }, include: { user: { select: { name: true } } } },
-    },
-  });
+  const [project, allProjects] = await Promise.all([
+    prisma.project.findUnique({
+      where: { slug: params.id },
+      include: {
+        infras: { orderBy: { sortOrder: "asc" } },
+        tools: { include: { tool: true }, orderBy: { createdAt: "asc" } },
+        docs: { orderBy: { updatedAt: "desc" } },
+        activities: { take: 20, orderBy: { createdAt: "desc" }, include: { user: { select: { name: true } } } },
+      },
+    }),
+    prisma.project.findMany({ select: { slug: true, name: true }, orderBy: { name: "asc" } }),
+  ]);
   if (!project) notFound();
 
   const initials = project.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  const primaryUrl = resolveInfraUrl("production", project.infras.find((i) => i.envName.toLowerCase() === "production")?.url, project.url);
 
   return (
     <>
-      <Topbar
-        title={project.name}
-        breadcrumb="Projects"
+      <ProjectDetailTopbar
+        currentSlug={project.slug}
+        currentName={project.name}
+        projects={allProjects}
         action={
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             <span className={`badge ${statusBadgeClass(project.status)}`}>{statusLabel(project.status)}</span>
@@ -54,9 +60,9 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
             <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 3 }}>{project.name}</div>
             <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 10 }}>{project.description ?? "No description."}</div>
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {project.url && (
-                <a href={normalizeExternalUrl(project.url)!} target="_blank" rel="noopener noreferrer" className="tag" style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 3 }}>
-                  🌐 {displayExternalUrl(project.url)}
+              {primaryUrl && (
+                <a href={primaryUrl} target="_blank" rel="noopener noreferrer" className="tag" style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 3 }}>
+                  🌐 {displayExternalUrl(primaryUrl)}
                   <ExternalLink size={9} />
                 </a>
               )}

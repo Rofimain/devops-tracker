@@ -88,6 +88,7 @@ model ProjectInfra {
   targetGroup  String?
   loadBalancer String?
   serverIp     String?
+  url          String?
   hosting      String[]
   cdn          String[]
   databases    String[]

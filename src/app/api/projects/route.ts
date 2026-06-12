@@ -39,6 +39,7 @@ export async function POST(req: NextRequest) {
         targetGroup: row.targetGroup.trim() || null,
         loadBalancer: row.loadBalancer.trim() || null,
         serverIp: row.serverIp.trim() || null,
+        url: normalizeExternalUrl(row.url),
         hosting: row.hosting,
         cdn: row.cdn,
         databases: row.databases,
@@ -46,12 +47,15 @@ export async function POST(req: NextRequest) {
         costNotes: row.costNotes?.trim() || null,
       }));
       const autoCost = projectCostPerMonthFromInfras(infraRows);
+      const productionUrl =
+        normalizeExternalUrl(infraRows.find((r) => r.envName.toLowerCase() === "production")?.url ?? undefined) ??
+        normalizeExternalUrl(body.url);
       const p = await tx.project.create({
         data: {
           name: body.name,
           slug,
           description: body.description || null,
-          url: normalizeExternalUrl(body.url),
+          url: productionUrl,
           repoUrl: normalizeExternalUrl(body.repoUrl),
           category: body.category || null,
           management: body.management || null,

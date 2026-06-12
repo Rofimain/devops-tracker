@@ -39,18 +39,30 @@ interface ProjectFormData {
   docIds?: string[];
 }
 
-function mapPrismaInfras(raw: unknown): InfraFormRow[] {
-  if (!Array.isArray(raw) || raw.length === 0) return [emptyInfraRow("production")];
+function mapPrismaInfras(raw: unknown, projectUrl?: string | null): InfraFormRow[] {
+  if (!Array.isArray(raw) || raw.length === 0) {
+    const row = emptyInfraRow("production");
+    if (projectUrl) row.url = projectUrl;
+    return [row];
+  }
   return orderInfraRows(
-    raw.map((r: any) => ({
-      envName: String(r.envName ?? "production"),
-      targetGroup: r.targetGroup ?? "",
-      loadBalancer: r.loadBalancer ?? "",
-      serverIp: r.serverIp ?? "",
-      hosting: Array.isArray(r.hosting) ? r.hosting.map(String) : [],
-      cdn: Array.isArray(r.cdn) ? r.cdn.map(String) : [],
-      databases: Array.isArray(r.databases) ? r.databases.map(String) : [],
-    }))
+    raw.map((r: any) => {
+      const envName = String(r.envName ?? "production");
+      let url = r.url != null ? String(r.url) : "";
+      if (!url && envName.toLowerCase() === "production" && projectUrl) {
+        url = projectUrl;
+      }
+      return {
+        envName,
+        targetGroup: r.targetGroup ?? "",
+        loadBalancer: r.loadBalancer ?? "",
+        serverIp: r.serverIp ?? "",
+        url,
+        hosting: Array.isArray(r.hosting) ? r.hosting.map(String) : [],
+        cdn: Array.isArray(r.cdn) ? r.cdn.map(String) : [],
+        databases: Array.isArray(r.databases) ? r.databases.map(String) : [],
+      };
+    })
   );
 }
 
@@ -93,7 +105,7 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
       ...dv,
       webBasedApp: normalizeWebBased(dv?.webBasedApp ?? (dv as { isWebApp?: boolean } | undefined)?.isWebApp),
       costPerMonth: normalizeCostForForm(dv?.costPerMonth),
-      infras: mapPrismaInfras(dv?.infras),
+      infras: mapPrismaInfras(dv?.infras, dv?.url),
       toolIds: Array.isArray(dv?.toolIds) ? [...dv.toolIds] : [],
       docIds: Array.isArray(dv?.docIds) ? [...dv.docIds] : [],
     };
@@ -112,12 +124,23 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
     setError("");
     try {
       const slug = mode === "create" ? slugify(form.name ?? "") : form.slug;
+      const infrasPrepared = infras.map((row) => {
+        const isProd = row.envName.toLowerCase() === "production";
+        const url = isProd
+          ? normalizeExternalUrl(row.url || form.url || "") ?? ""
+          : normalizeExternalUrl(row.url) ?? "";
+        return { ...row, url };
+      });
+      const productionUrl =
+        normalizeExternalUrl(infrasPrepared.find((r) => r.envName.toLowerCase() === "production")?.url || form.url) ??
+        normalizeExternalUrl(form.url);
+
       const payload = {
         ...form,
         slug,
-        url: normalizeExternalUrl(form.url),
+        url: productionUrl,
         repoUrl: normalizeExternalUrl(form.repoUrl),
-        infras,
+        infras: infrasPrepared,
         toolIds: form.toolIds ?? [],
         docIds: form.docIds ?? [],
       };
@@ -166,8 +189,25 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
               />
             </div>
             <div className="form-group">
-              <label className="form-label">URL</label>
-              <input className="form-input" value={form.url ?? ""} onChange={(e) => set("url", e.target.value)} placeholder="https://portal.company.com" />
+              <label className="form-label">URL (Production)</label>
+              <input
+                className="form-input"
+                value={form.url ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setForm((f) => ({
+                    ...f,
+                    url: v,
+                    infras: (f.infras ?? []).map((row) =>
+                      row.envName.toLowerCase() === "production" ? { ...row, url: v } : row
+                    ),
+                  }));
+                }}
+                placeholder="https://portal.company.com"
+              />
+              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+                URL staging/dev atur per environment di bagian Infrastruktur.
+              </div>
             </div>
             <CreatableSelect
               label="Category"
@@ -240,7 +280,17 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
               storageKey={LS.webBased}
             />
           </div>
-          <ProjectInfraFields infras={form.infras ?? []} onChange={(next) => set("infras", next)} />
+          <ProjectInfraFields
+            infras={form.infras ?? []}
+            onChange={(next) => {
+              const production = next.find((r) => r.envName.toLowerCase() === "production");
+              setForm((f) => ({
+                ...f,
+                infras: next,
+                url: production?.url ?? f.url,
+              }));
+            }}
+          />
           <div className="form-group" style={{ marginTop: 12 }}>
             <label className="form-label">Notes / Catatan Tambahan</label>
             <textarea className="form-textarea" value={form.notes ?? ""} onChange={(e) => set("notes", e.target.value)} placeholder="Catatan konfigurasi..." />
