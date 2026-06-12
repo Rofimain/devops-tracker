@@ -5,6 +5,7 @@ import { recordActivity } from "@/lib/activity-log";
 import { normalizeCostPerMonth, slugify } from "@/lib/utils";
 import { normalizeExternalUrl } from "@/lib/external-url";
 import { parseInfrasFromBody } from "@/lib/project-infra";
+import { infraCostItemsToJson, projectCostPerMonthFromInfras } from "@/lib/project-cost-sync";
 
 function parseIdArray(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
@@ -32,6 +33,19 @@ export async function POST(req: NextRequest) {
     const docIds = parseIdArray(body.docIds);
 
     const createdId = await prisma.$transaction(async (tx) => {
+      const infraRows = infras.map((row, i) => ({
+        sortOrder: i,
+        envName: row.envName,
+        targetGroup: row.targetGroup.trim() || null,
+        loadBalancer: row.loadBalancer.trim() || null,
+        serverIp: row.serverIp.trim() || null,
+        hosting: row.hosting,
+        cdn: row.cdn,
+        databases: row.databases,
+        costItems: infraCostItemsToJson(row.costItems),
+        costNotes: row.costNotes?.trim() || null,
+      }));
+      const autoCost = projectCostPerMonthFromInfras(infraRows);
       const p = await tx.project.create({
         data: {
           name: body.name,
@@ -44,20 +58,9 @@ export async function POST(req: NextRequest) {
           status: body.status || "ACTIVE",
           platform: body.platform || [],
           webBasedApp: typeof body.webBasedApp === "string" && body.webBasedApp.trim() ? body.webBasedApp.trim() : "Yes",
-          costPerMonth: normalizeCostPerMonth(body.costPerMonth),
+          costPerMonth: autoCost ?? normalizeCostPerMonth(body.costPerMonth),
           notes: body.notes || null,
-          infras: {
-            create: infras.map((row, i) => ({
-              sortOrder: i,
-              envName: row.envName,
-              targetGroup: row.targetGroup.trim() || null,
-              loadBalancer: row.loadBalancer.trim() || null,
-              serverIp: row.serverIp.trim() || null,
-              hosting: row.hosting,
-              cdn: row.cdn,
-              databases: row.databases,
-            })),
-          },
+          infras: { create: infraRows },
         },
       });
       if (toolIds.length) {

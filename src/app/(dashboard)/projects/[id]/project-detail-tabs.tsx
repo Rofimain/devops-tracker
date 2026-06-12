@@ -4,14 +4,22 @@ import { Fragment, useState } from "react";
 import Link from "next/link";
 import { TOOL_CATEGORY_COLORS, timeAgo, statusBadgeClass, statusLabel, webBasedBadgeClass } from "@/lib/utils";
 import { displayExternalUrl, displayRepoUrl, normalizeExternalUrl } from "@/lib/external-url";
+import { formatUsd, parseCostLineItems, sumCostItems } from "@/lib/project-cost";
 import { FileText, Plus, ExternalLink } from "lucide-react";
+import { ProjectCostTab } from "./project-cost-tab";
 
 export function ProjectDetailTabs({ project, canWrite = true }: { project: any; canWrite?: boolean }) {
   const [tab, setTab] = useState("overview");
 
+  const costTotal = (project.infras ?? []).reduce(
+    (sum: number, inf: any) => sum + sumCostItems(parseCostLineItems(inf.costItems)),
+    0
+  );
+
   const tabs = [
     { id: "overview", label: "Overview" },
     { id: "infra", label: "Infrastruktur" },
+    { id: "cost", label: costTotal > 0 ? `Cost / Month (${formatUsd(costTotal)})` : "Cost / Month" },
     { id: "tools", label: `Tools (${project.tools?.length ?? 0})` },
     { id: "docs", label: `Dokumentasi (${project.docs?.length ?? 0})` },
     { id: "activity", label: "Activity Log" },
@@ -66,7 +74,15 @@ export function ProjectDetailTabs({ project, canWrite = true }: { project: any; 
             </div>
             <div className="info-row">
               <span className="info-label">Cost / Month</span>
-              <span className="info-value">{project.costPerMonth?.trim() ? project.costPerMonth : "—"}</span>
+              <span className="info-value">
+                {costTotal > 0 ? (
+                  <strong>{formatUsd(costTotal)}/mo</strong>
+                ) : project.costPerMonth?.trim() ? (
+                  project.costPerMonth
+                ) : (
+                  "—"
+                )}
+              </span>
             </div>
             {project.notes && <div className="info-row"><span className="info-label">Notes</span><span className="info-value" style={{ whiteSpace: "pre-wrap", fontSize: 11 }}>{project.notes}</span></div>}
           </div>
@@ -182,6 +198,11 @@ export function ProjectDetailTabs({ project, canWrite = true }: { project: any; 
             ))
           )}
         </div>
+      )}
+
+      {/* COST */}
+      {tab === "cost" && (
+        <ProjectCostTab projectId={project.id} infras={project.infras ?? []} canWrite={canWrite} />
       )}
 
       {/* TOOLS */}

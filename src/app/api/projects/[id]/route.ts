@@ -5,6 +5,8 @@ import { recordActivity } from "@/lib/activity-log";
 import { normalizeCostPerMonth } from "@/lib/utils";
 import { normalizeExternalUrl } from "@/lib/external-url";
 import { parseInfrasFromBody } from "@/lib/project-infra";
+import { parseCostLineItems } from "@/lib/project-cost";
+import { infraCostItemsToJson, projectCostPerMonthFromInfras } from "@/lib/project-cost-sync";
 
 function parseIdArray(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
@@ -36,7 +38,40 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const docIds = parseIdArray(body.docIds);
 
     await prisma.$transaction(async (tx) => {
+      const existingInfras = await tx.projectInfra.findMany({ where: { projectId: params.id } });
+      const existingCostByEnv = new Map(
+        existingInfras.map((inf) => [
+          inf.envName.toLowerCase(),
+          { costItems: inf.costItems, costNotes: inf.costNotes },
+        ])
+      );
+
       await tx.projectInfra.deleteMany({ where: { projectId: params.id } });
+
+      const infraRows = infras.map((row, i) => {
+        const preserved = existingCostByEnv.get(row.envName.toLowerCase());
+        const costItems =
+          row.costItems && row.costItems.length > 0
+            ? row.costItems
+            : parseCostLineItems(preserved?.costItems);
+        const costNotes = row.costNotes?.trim() ? row.costNotes : (preserved?.costNotes ? String(preserved.costNotes) : undefined);
+        return {
+          projectId: params.id,
+          sortOrder: i,
+          envName: row.envName,
+          targetGroup: row.targetGroup.trim() || null,
+          loadBalancer: row.loadBalancer.trim() || null,
+          serverIp: row.serverIp.trim() || null,
+          hosting: row.hosting,
+          cdn: row.cdn,
+          databases: row.databases,
+          costItems: infraCostItemsToJson(costItems),
+          costNotes: costNotes ? String(costNotes) : null,
+        };
+      });
+
+      const autoCost = projectCostPerMonthFromInfras(infraRows);
+
       await tx.project.update({
         where: { id: params.id },
         data: {
@@ -50,23 +85,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
           status: body.status,
           platform: body.platform || [],
           webBasedApp: typeof body.webBasedApp === "string" && body.webBasedApp.trim() ? body.webBasedApp.trim() : "Yes",
-          costPerMonth: normalizeCostPerMonth(body.costPerMonth),
+          costPerMonth: autoCost ?? normalizeCostPerMonth(body.costPerMonth),
           notes: body.notes || null,
         },
       });
-      await tx.projectInfra.createMany({
-        data: infras.map((row, i) => ({
-          projectId: params.id,
-          sortOrder: i,
-          envName: row.envName,
-          targetGroup: row.targetGroup.trim() || null,
-          loadBalancer: row.loadBalancer.trim() || null,
-          serverIp: row.serverIp.trim() || null,
-          hosting: row.hosting,
-          cdn: row.cdn,
-          databases: row.databases,
-        })),
-      });
+      await tx.projectInfra.createMany({ data: infraRows });
 
       await tx.projectTool.deleteMany({ where: { projectId: params.id } });
       if (toolIds.length) {

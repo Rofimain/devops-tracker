@@ -1,3 +1,5 @@
+import { parseCostLineItems, type ProjectCostLineItem } from "@/lib/project-cost";
+
 export type InfraFormRow = {
   envName: string;
   targetGroup: string;
@@ -6,6 +8,8 @@ export type InfraFormRow = {
   hosting: string[];
   cdn: string[];
   databases: string[];
+  costItems?: ProjectCostLineItem[];
+  costNotes?: string;
 };
 
 export const PRESET_ENVIRONMENTS = ["production", "staging", "development"];
@@ -53,6 +57,8 @@ export function parseInfrasFromBody(body: unknown): InfraFormRow[] {
       : typeof row?.databases === "string"
         ? row.databases.split(",").map((s: string) => s.trim()).filter(Boolean)
         : [],
+    costItems: parseCostLineItems(row?.costItems),
+    costNotes: row?.costNotes ? String(row.costNotes) : undefined,
   }));
   const byKey = new Map<string, InfraFormRow>();
   for (const row of mapped) {

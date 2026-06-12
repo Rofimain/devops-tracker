@@ -123,6 +123,7 @@ export async function ensureProjectSchema(): Promise<void> {
     await ensureActivityAuditColumns();
     await ensureDocSchema();
     await ensureProjectExternalUrls();
+    await ensureProjectInfraCostColumns();
   } catch (e) {
     console.error("[ensureProjectSchema] gagal menyelaraskan DB:", e);
   }
@@ -442,4 +443,17 @@ async function ensureProjectExternalUrls(): Promise<void> {
       AND "repoUrl" NOT LIKE 'https://%'
       AND "repoUrl" NOT LIKE '%:%'
   `);
+}
+
+async function ensureProjectInfraCostColumns(): Promise<void> {
+  const tableExistsRows = await prisma.$queryRaw<[{ exists: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'ProjectInfra'
+    ) AS "exists"
+  `;
+  if (!Boolean(tableExistsRows[0]?.exists)) return;
+
+  await prisma.$executeRawUnsafe(`ALTER TABLE "ProjectInfra" ADD COLUMN IF NOT EXISTS "costItems" JSONB;`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "ProjectInfra" ADD COLUMN IF NOT EXISTS "costNotes" TEXT;`);
 }

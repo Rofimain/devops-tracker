@@ -216,8 +216,11 @@ export function ProjectForm({ mode, defaultValues }: { mode: "create" | "edit"; 
                 type="text"
                 value={form.costPerMonth ?? ""}
                 onChange={(e) => set("costPerMonth", e.target.value.trim() === "" ? null : e.target.value)}
-                placeholder="Mis. 45 USD, ~50/mo, gratis"
+                placeholder="Otomatis dari tab Cost / Month (opsional override)"
               />
+              <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
+                Disarankan atur detail biaya per environment di tab <strong>Cost / Month</strong> pada halaman project.
+              </div>
             </div>
           </div>
         </div>

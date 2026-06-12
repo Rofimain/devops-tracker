@@ -91,6 +91,8 @@ model ProjectInfra {
   hosting      String[]
   cdn          String[]
   databases    String[]
+  costItems    Json?
+  costNotes    String?
   project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, envName])
