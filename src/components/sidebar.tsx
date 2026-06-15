@@ -5,7 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import type { LucideIcon } from "lucide-react";
-import { LayoutDashboard, List, Wrench, FileText, Users, Settings, LogOut, BookMarked, CloudOff, ScrollText, RefreshCw } from "lucide-react";
+import { LayoutDashboard, List, Wrench, FileText, Users, Settings, LogOut, BookMarked, CloudOff, ScrollText, RefreshCw, ClipboardCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "@/components/brand-logo";
 import { canPurgeCloudflare, isAdminRole, isSuperAdminRole } from "@/lib/roles";
@@ -25,6 +25,7 @@ const navItems: NavItem[] = [
   { kind: "section", label: "Main", visible: (r) => r !== "OPERATOR" },
   { kind: "link", label: "Dashboard", href: "/", icon: LayoutDashboard, visible: (r) => r !== "OPERATOR" },
   { kind: "link", label: "Logbook mingguan", href: "/logbook", icon: BookMarked, visible: (r) => r !== "OPERATOR" },
+  { kind: "link", label: "Daily Monitoring", href: "/monitoring", icon: ClipboardCheck, visible: (r) => r !== "OPERATOR" },
   { kind: "link", label: "Projects", href: "/projects", icon: List, countKey: "projects", visible: (r) => r !== "OPERATOR" },
   { kind: "section", label: "Resources", visible: (r) => r !== "OPERATOR" },
   { kind: "link", label: "Tools Catalog", href: "/tools", icon: Wrench, visible: (r) => r !== "OPERATOR" },

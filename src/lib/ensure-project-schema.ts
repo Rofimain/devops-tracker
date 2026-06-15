@@ -117,6 +117,7 @@ export async function ensureProjectSchema(): Promise<void> {
     await ensureProjectInfraTableAndRows();
     await ensureLogbookTable();
     await ensureLogbookOccurredAtColumn();
+    await ensureMonitoringTable();
     await ensureCloudflareTables();
     await ensureCloudFrontAppConfigTable();
     await ensurePurgePresetZoneIdColumn();
@@ -188,6 +189,44 @@ async function ensureLogbookOccurredAtColumn(): Promise<void> {
   await prisma.$executeRawUnsafe(
     `CREATE INDEX IF NOT EXISTS "LogbookEntry_occurredAt_idx" ON "LogbookEntry"("occurredAt");`
   );
+}
+
+/** Tabel DevOpsMonitoringEntry (daily monitoring report). */
+async function ensureMonitoringTable(): Promise<void> {
+  const tableExistsRows = await prisma.$queryRaw<[{ exists: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'DevOpsMonitoringEntry'
+    ) AS "exists"
+  `;
+  if (Boolean(tableExistsRows[0]?.exists)) return;
+
+  await prisma.$executeRawUnsafe(`
+CREATE TABLE IF NOT EXISTS "DevOpsMonitoringEntry" (
+    "id" TEXT NOT NULL,
+    "activityCategory" TEXT NOT NULL,
+    "activity" TEXT NOT NULL,
+    "activityDate" DATE NOT NULL,
+    "application" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'Done',
+    "source" TEXT NOT NULL DEFAULT 'manual',
+    "userId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "DevOpsMonitoringEntry_pkey" PRIMARY KEY ("id")
+);
+`);
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "DevOpsMonitoringEntry_activityDate_idx" ON "DevOpsMonitoringEntry"("activityDate");`
+  );
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "DevOpsMonitoringEntry_source_activityDate_idx" ON "DevOpsMonitoringEntry"("source", "activityDate");`
+  );
+  await prisma.$executeRawUnsafe(`ALTER TABLE "DevOpsMonitoringEntry" DROP CONSTRAINT IF EXISTS "DevOpsMonitoringEntry_userId_fkey";`);
+  await prisma.$executeRawUnsafe(`
+ALTER TABLE "DevOpsMonitoringEntry" ADD CONSTRAINT "DevOpsMonitoringEntry_userId_fkey"
+  FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+`);
 }
 
 async function ensureActivityAuditColumns(): Promise<void> {

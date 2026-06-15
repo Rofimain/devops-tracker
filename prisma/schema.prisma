@@ -21,7 +21,8 @@ model User {
   accounts        Account[]
   activities      Activity[]
   sessions        Session[]
-  logbookEntries  LogbookEntry[]
+  logbookEntries       LogbookEntry[]
+  monitoringEntries    DevOpsMonitoringEntry[]
 }
 
 model Account {
@@ -163,6 +164,25 @@ model Activity {
   user       User?    @relation(fields: [userId], references: [id])
 
   @@index([createdAt])
+}
+
+/// Laporan aktivitas DevOps daily monitoring (auto + manual).
+model DevOpsMonitoringEntry {
+  id               String   @id @default(cuid())
+  activityCategory String
+  activity         String
+  activityDate     DateTime @db.Date
+  application      String
+  status           String   @default("Done")
+  /// auto = entri harian otomatis jam 15:00 WIB; manual = diisi pengguna
+  source           String   @default("manual")
+  userId           String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([activityDate])
+  @@index([source, activityDate])
 }
 
 /// Catatan aktivitas DevOps per minggu ISO (bisa diisi oleh seluruh tim).

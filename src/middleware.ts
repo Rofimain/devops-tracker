@@ -26,6 +26,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  /** Cron job — auth via CRON_SECRET, bukan session JWT. */
+  if (path === "/api/cron/daily-monitoring" && request.method === "POST") {
+    return NextResponse.next();
+  }
+
   /** Jangan redirect dari middleware untuk /login: getToken di Edge bisa beda dengan auth() di Server Component → loop ERR_TOO_MANY_REDIRECTS. */
   if (path === "/login") {
     return NextResponse.next();
