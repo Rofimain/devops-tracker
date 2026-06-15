@@ -420,14 +420,7 @@ export function MonitoringView({
                     <td style={{ color: "var(--text-muted)" }}>{i + 1}</td>
                     <td style={{ fontSize: 12 }}>{entry.activityCategory}</td>
                     <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                        <span style={{ fontWeight: 500 }}>{entry.activity}</span>
-                        {entry.source === "auto" && (
-                          <span className="badge badge-blue" style={{ fontSize: 9 }}>
-                            Otomatis
-                          </span>
-                        )}
-                      </div>
+                      <span style={{ fontWeight: 500 }}>{entry.activity}</span>
                     </td>
                     <td style={{ fontSize: 12, whiteSpace: "nowrap" }}>{entry.activityDateDisplay}</td>
                     <td style={{ fontSize: 12 }}>{entry.application}</td>
