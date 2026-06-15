@@ -7,9 +7,7 @@ export default function NewProjectPage() {
     <>
       <Topbar title="New Project" breadcrumb="Projects" breadcrumbHref="/projects" />
       <div className="app-content">
-        <div style={{ maxWidth: 760, margin: "0 auto" }}>
-          <ProjectForm mode="create" />
-        </div>
+        <ProjectForm mode="create" />
       </div>
     </>
   );

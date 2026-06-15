@@ -1,13 +1,45 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { TOOL_CATEGORY_COLORS, timeAgo, statusBadgeClass, statusLabel, webBasedBadgeClass } from "@/lib/utils";
+import { TOOL_CATEGORY_COLORS, timeAgo, webBasedBadgeClass } from "@/lib/utils";
 import { displayExternalUrl, displayRepoUrl, normalizeExternalUrl } from "@/lib/external-url";
 import { envUrlLabel, resolveInfraUrl } from "@/lib/project-env-url";
 import { formatUsd, parseCostLineItems, sumCostItems } from "@/lib/project-cost";
 import { FileText, Plus, ExternalLink } from "lucide-react";
 import { ProjectCostTab } from "./project-cost-tab";
+
+function DlRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="project-dl-row">
+      <dt>{label}</dt>
+      <dd>{children}</dd>
+    </div>
+  );
+}
+
+function EnvKv({ label, value }: { label: string; value: ReactNode }) {
+  if (value == null || value === "" || value === "—") return null;
+  return (
+    <div className="project-env-kv">
+      <div className="project-env-kv-label">{label}</div>
+      <div className="project-env-kv-value">{value}</div>
+    </div>
+  );
+}
+
+function tagList(items: string[]) {
+  if (!items.length) return null;
+  return (
+    <span style={{ display: "inline-flex", flexWrap: "wrap", gap: 4 }}>
+      {items.map((t, i) => (
+        <span key={i} className="tag">
+          {t}
+        </span>
+      ))}
+    </span>
+  );
+}
 
 export function ProjectDetailTabs({ project, canWrite = true }: { project: any; canWrite?: boolean }) {
   const [tab, setTab] = useState("overview");
@@ -36,110 +68,110 @@ export function ProjectDetailTabs({ project, canWrite = true }: { project: any; 
 
       {/* OVERVIEW */}
       {tab === "overview" && (
-        <div className="grid-2">
+        <div className="project-overview-grid">
           <div className="card">
-            <div className="card-header"><span className="card-title">Info Project</span></div>
-            <div className="info-row"><span className="info-label">Site Name</span><span className="info-value">{project.name}</span></div>
-            {(project.infras ?? []).length > 0 ? (
-              (project.infras ?? []).map((inf: any) => {
-                const href = resolveInfraUrl(inf.envName, inf.url, project.url);
-                return (
-                  <div key={inf.id ?? inf.envName} className="info-row">
-                    <span className="info-label">{envUrlLabel(inf.envName)}</span>
-                    <span className="info-value">
-                      {href ? (
+            <div className="card-header">
+              <span className="card-title">Info Project</span>
+            </div>
+            <dl className="project-dl">
+              <DlRow label="Site Name">{project.name}</DlRow>
+              {(project.infras ?? []).length > 0
+                ? (project.infras ?? []).map((inf: any) => {
+                    const href = resolveInfraUrl(inf.envName, inf.url, project.url);
+                    if (!href) return null;
+                    return (
+                      <DlRow key={inf.id ?? inf.envName} label={envUrlLabel(inf.envName)}>
                         <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
                           {displayExternalUrl(href)}
                         </a>
-                      ) : (
-                        "—"
-                      )}
-                    </span>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="info-row">
-                <span className="info-label">URL (Production)</span>
-                <span className="info-value">
-                  {project.url ? (
-                    <a href={normalizeExternalUrl(project.url)!} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
-                      {displayExternalUrl(project.url)}
-                    </a>
-                  ) : (
-                    "—"
-                  )}
-                </span>
-              </div>
-            )}
-            <div className="info-row"><span className="info-label">Category</span><span className="info-value">{project.category ? <span className="badge badge-blue">{project.category}</span> : "—"}</span></div>
-            <div className="info-row"><span className="info-label">Management</span><span className="info-value">{project.management || "—"}</span></div>
-            <div className="info-row">
-              <span className="info-label">Status</span>
-              <span className="info-value">
-                <span className={`badge ${statusBadgeClass(project.status)}`}>{statusLabel(project.status)}</span>
-              </span>
-            </div>
-            <div className="info-row"><span className="info-label">Platform</span><span className="info-value">{(project.platform ?? []).map((t: string, i: number) => <span key={i} className="tag">{t}</span>)}</span></div>
-            <div className="info-row">
-              <span className="info-label">Repository</span>
-              <span className="info-value">
-                {project.repoUrl ? (
-                  <a href={normalizeExternalUrl(project.repoUrl)!} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
+                      </DlRow>
+                    );
+                  })
+                : project.url ? (
+                    <DlRow label="URL (Production)">
+                      <a
+                        href={normalizeExternalUrl(project.url)!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ color: "var(--accent)" }}
+                      >
+                        {displayExternalUrl(project.url)}
+                      </a>
+                    </DlRow>
+                  ) : null}
+              {project.category ? (
+                <DlRow label="Category">
+                  <span className="badge badge-blue">{project.category}</span>
+                </DlRow>
+              ) : null}
+              {project.management?.trim() ? <DlRow label="Management">{project.management}</DlRow> : null}
+              {(project.platform ?? []).length > 0 ? (
+                <DlRow label="Platform">{tagList(project.platform)}</DlRow>
+              ) : null}
+              {project.repoUrl ? (
+                <DlRow label="Repository">
+                  <a
+                    href={normalizeExternalUrl(project.repoUrl)!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: "var(--accent)" }}
+                  >
                     {displayRepoUrl(project.repoUrl)}
                   </a>
-                ) : (
-                  "—"
-                )}
-              </span>
-            </div>
-            <div className="info-row">
-              <span className="info-label">Cost / Month</span>
-              <span className="info-value">
-                {costTotal > 0 ? (
-                  <strong>{formatUsd(costTotal)}/mo</strong>
-                ) : project.costPerMonth?.trim() ? (
-                  project.costPerMonth
-                ) : (
-                  "—"
-                )}
-              </span>
-            </div>
-            {project.notes && <div className="info-row"><span className="info-label">Notes</span><span className="info-value" style={{ whiteSpace: "pre-wrap", fontSize: 11 }}>{project.notes}</span></div>}
+                </DlRow>
+              ) : null}
+              {costTotal > 0 || project.costPerMonth?.trim() ? (
+                <DlRow label="Cost / Month">
+                  {costTotal > 0 ? (
+                    <strong>{formatUsd(costTotal)}/mo</strong>
+                  ) : (
+                    project.costPerMonth
+                  )}
+                </DlRow>
+              ) : null}
+              {project.notes?.trim() ? (
+                <DlRow label="Notes">
+                  <span style={{ whiteSpace: "pre-wrap", fontSize: 11, fontWeight: 400, color: "var(--text-secondary)" }}>
+                    {project.notes}
+                  </span>
+                </DlRow>
+              ) : null}
+            </dl>
           </div>
+
           <div className="card">
-            <div className="card-header"><span className="card-title">Infrastruktur Summary</span></div>
-            <div className="info-row">
-              <span className="info-label">Web App</span>
-              <span className="info-value">
-                <span className={`badge ${webBasedBadgeClass(project.webBasedApp)}`}>{project.webBasedApp}</span>
-              </span>
+            <div className="card-header">
+              <span className="card-title">Infrastruktur Summary</span>
+              <span className={`badge ${webBasedBadgeClass(project.webBasedApp)}`}>{project.webBasedApp}</span>
             </div>
-            <div className="info-row">
-              <span className="info-label">Environment</span>
-              <span className="info-value" style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                {(project.infras ?? []).length === 0 ? (
-                  "—"
-                ) : (
-                  (project.infras ?? []).map((inf: { envName: string }, i: number) => (
-                    <span key={i} className="badge badge-blue" style={{ textTransform: "capitalize" }}>
-                      {inf.envName}
-                    </span>
-                  ))
-                )}
-              </span>
-            </div>
-            {(project.infras ?? []).map((inf: any) => (
-              <div key={inf.id ?? inf.envName} style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--border)" }}>
-                <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 6, textTransform: "capitalize" }}>{inf.envName}</div>
-                <div className="info-row"><span className="info-label">Target Group</span><span className="info-value mono">{inf.targetGroup || "—"}</span></div>
-                <div className="info-row"><span className="info-label">Load Balancer</span><span className="info-value mono">{inf.loadBalancer || "—"}</span></div>
-                <div className="info-row"><span className="info-label">Server IP</span><span className="info-value mono">{inf.serverIp || "—"}</span></div>
-                <div className="info-row"><span className="info-label">Hosting</span><span className="info-value">{(inf.hosting ?? []).map((h: string, i: number) => <span key={i} className="tag">{h}</span>)}</span></div>
-                <div className="info-row"><span className="info-label">CDN</span><span className="info-value">{(inf.cdn ?? []).map((c: string, i: number) => <span key={i} className="tag">{c}</span>)}</span></div>
-                <div className="info-row"><span className="info-label">Database</span><span className="info-value">{(inf.databases ?? []).map((d: string, i: number) => <span key={i} className="tag">{d}</span>)}</span></div>
+            {(project.infras ?? []).length === 0 ? (
+              <div className="card-body" style={{ color: "var(--text-muted)", fontSize: 12 }}>
+                Belum ada data infrastruktur per environment.
               </div>
-            ))}
+            ) : (
+              <div className="project-env-grid">
+                {(project.infras ?? []).map((inf: any) => (
+                  <div key={inf.id ?? inf.envName} className="project-env-card">
+                    <div className="project-env-card-head">
+                      <span>{inf.envName}</span>
+                      {(inf.hosting ?? []).length > 0 ? (
+                        <span className="badge badge-gray" style={{ fontSize: 9 }}>
+                          {(inf.hosting ?? [])[0]}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="project-env-card-body">
+                      <EnvKv label="Target Group" value={inf.targetGroup || null} />
+                      <EnvKv label="Load Balancer" value={inf.loadBalancer || null} />
+                      <EnvKv label="Server IP" value={inf.serverIp || null} />
+                      <EnvKv label="Hosting" value={tagList(inf.hosting ?? [])} />
+                      <EnvKv label="CDN" value={tagList(inf.cdn ?? [])} />
+                      <EnvKv label="Database" value={tagList(inf.databases ?? [])} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

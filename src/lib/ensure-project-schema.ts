@@ -118,6 +118,7 @@ export async function ensureProjectSchema(): Promise<void> {
     await ensureLogbookTable();
     await ensureLogbookOccurredAtColumn();
     await ensureMonitoringTable();
+    await ensureMonitoringColumns();
     await ensureCloudflareTables();
     await ensureCloudFrontAppConfigTable();
     await ensurePurgePresetZoneIdColumn();
@@ -204,11 +205,17 @@ async function ensureMonitoringTable(): Promise<void> {
   await prisma.$executeRawUnsafe(`
 CREATE TABLE IF NOT EXISTS "DevOpsMonitoringEntry" (
     "id" TEXT NOT NULL,
+    "rowType" TEXT NOT NULL DEFAULT 'optimize',
     "activityCategory" TEXT NOT NULL,
     "activity" TEXT NOT NULL,
     "activityDate" DATE NOT NULL,
     "application" TEXT NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'Done',
+    "check1At" TIMESTAMP(3),
+    "check1Status" TEXT,
+    "check2At" TIMESTAMP(3),
+    "check2Status" TEXT,
+    "dailyDateKey" TEXT,
     "source" TEXT NOT NULL DEFAULT 'manual',
     "userId" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -227,6 +234,53 @@ CREATE TABLE IF NOT EXISTS "DevOpsMonitoringEntry" (
 ALTER TABLE "DevOpsMonitoringEntry" ADD CONSTRAINT "DevOpsMonitoringEntry_userId_fkey"
   FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 `);
+}
+
+/** Kolom daily checking 2x + rowType (upgrade dari schema awal). */
+async function ensureMonitoringColumns(): Promise<void> {
+  const tableExistsRows = await prisma.$queryRaw<[{ exists: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM information_schema.tables
+      WHERE table_schema = 'public' AND table_name = 'DevOpsMonitoringEntry'
+    ) AS "exists"
+  `;
+  if (!Boolean(tableExistsRows[0]?.exists)) return;
+
+  await prisma.$executeRawUnsafe(`ALTER TABLE "DevOpsMonitoringEntry" ADD COLUMN IF NOT EXISTS "rowType" TEXT NOT NULL DEFAULT 'optimize';`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "DevOpsMonitoringEntry" ADD COLUMN IF NOT EXISTS "check1At" TIMESTAMP(3);`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "DevOpsMonitoringEntry" ADD COLUMN IF NOT EXISTS "check1Status" TEXT;`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "DevOpsMonitoringEntry" ADD COLUMN IF NOT EXISTS "check2At" TIMESTAMP(3);`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "DevOpsMonitoringEntry" ADD COLUMN IF NOT EXISTS "check2Status" TEXT;`);
+  await prisma.$executeRawUnsafe(`ALTER TABLE "DevOpsMonitoringEntry" ADD COLUMN IF NOT EXISTS "dailyDateKey" TEXT;`);
+  // Hapus duplikat entri auto per hari (schema lama bisa punya >1 baris) sebelum backfill dailyDateKey.
+  await prisma.$executeRawUnsafe(`
+    DELETE FROM "DevOpsMonitoringEntry" d
+    USING "DevOpsMonitoringEntry" keep
+    WHERE d."source" = 'auto'
+      AND keep."source" = 'auto'
+      AND d."activityDate" = keep."activityDate"
+      AND d."createdAt" > keep."createdAt";
+  `);
+  await prisma.$executeRawUnsafe(`
+    UPDATE "DevOpsMonitoringEntry"
+    SET "rowType" = 'daily',
+        "dailyDateKey" = to_char("activityDate", 'YYYY-MM-DD'),
+        "check1At" = COALESCE("check1At", "createdAt"),
+        "check1Status" = COALESCE("check1Status", 'Done'),
+        "check2Status" = COALESCE("check2Status", 'Pending')
+    WHERE "source" = 'auto' AND "rowType" = 'optimize';
+  `);
+  await prisma.$executeRawUnsafe(
+    `CREATE UNIQUE INDEX IF NOT EXISTS "DevOpsMonitoringEntry_dailyDateKey_key" ON "DevOpsMonitoringEntry"("dailyDateKey") WHERE "dailyDateKey" IS NOT NULL;`
+  );
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "DevOpsMonitoringEntry_rowType_activityDate_idx" ON "DevOpsMonitoringEntry"("rowType", "activityDate");`
+  );
+  await prisma.$executeRawUnsafe(`
+    UPDATE "DevOpsMonitoringEntry"
+    SET "activityCategory" = 'Optimize'
+    WHERE "activityCategory" = 'Monitoring and Optimize';
+  `);
 }
 
 async function ensureActivityAuditColumns(): Promise<void> {

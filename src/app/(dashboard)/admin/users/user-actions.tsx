@@ -2,15 +2,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 
 const ROLES = ["MEMBER", "ADMIN", "OPERATOR"] as const;
 
 export function UserActions({
   userId,
+  userEmail,
   currentRole,
   accountApproved,
 }: {
   userId: string;
+  userEmail: string;
   currentRole: string;
   accountApproved: boolean;
 }) {
@@ -59,6 +62,25 @@ export function UserActions({
     }
   };
 
+  const remove = async () => {
+    if (!confirm(`Hapus user "${userEmail}"? Tindakan ini tidak bisa dibatalkan.`)) return;
+    setErr("");
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/users/${userId}`, { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErr(typeof data.error === "string" ? data.error : `Gagal (${res.status})`);
+        return;
+      }
+      router.refresh();
+    } catch {
+      setErr("Gagal menghapus user");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-start" }}>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center" }}>
@@ -81,6 +103,15 @@ export function UserActions({
             Setujui akses
           </button>
         ) : null}
+        <button
+          type="button"
+          className="btn btn-sm btn-danger"
+          disabled={loading}
+          title="Hapus user"
+          onClick={remove}
+        >
+          <Trash2 size={13} />
+        </button>
       </div>
       {err ? <span style={{ fontSize: 10, color: "var(--red-text)" }}>{err}</span> : null}
     </div>

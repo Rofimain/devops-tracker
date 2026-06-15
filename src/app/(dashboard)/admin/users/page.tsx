@@ -32,7 +32,7 @@ export default async function AdminUsersPage() {
         <div className="card">
           <div className="card-header">
             <span className="card-title">Team Members ({users.length})</span>
-            {isSuperAdmin(session?.user?.role) && <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Super Admin dapat mengubah role user</span>}
+            {isSuperAdmin(session?.user?.role) && <span style={{ fontSize: 11, color: "var(--text-muted)" }}>Super Admin dapat mengubah role atau menghapus user</span>}
           </div>
           <div className="table-wrap">
             <table className="data-table">
@@ -77,7 +77,12 @@ export default async function AdminUsersPage() {
                     {isSuperAdmin(session?.user?.role) && (
                       <td>
                         {user.role !== "SUPER_ADMIN" && (
-                          <UserActions userId={user.id} currentRole={user.role} accountApproved={user.accountApproved} />
+                          <UserActions
+                            userId={user.id}
+                            userEmail={user.email}
+                            currentRole={user.role}
+                            accountApproved={user.accountApproved}
+                          />
                         )}
                       </td>
                     )}

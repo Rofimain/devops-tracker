@@ -3,7 +3,7 @@ import { auth, isAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordActivity } from "@/lib/activity-log";
 import { canWriteAppData } from "@/lib/roles";
-import { monitoringPatchSchema } from "@/lib/daily-monitoring";
+import { DAILY_ROW_TYPE, monitoringPatchSchema, OPTIMIZE_ROW_TYPE } from "@/lib/daily-monitoring";
 import { dateKeyToUtcDate } from "@/lib/monitoring-date";
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -16,8 +16,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   const existing = await prisma.devOpsMonitoringEntry.findUnique({ where: { id: params.id } });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const canEdit = existing.source === "manual" || isAdmin(session.user.role);
-  if (!canEdit) {
+  if (existing.rowType === DAILY_ROW_TYPE && !isAdmin(session.user.role)) {
+    return NextResponse.json({ error: "Baris monitoring harian tidak bisa diubah" }, { status: 403 });
+  }
+  if (existing.rowType === OPTIMIZE_ROW_TYPE && existing.source === "auto" && !isAdmin(session.user.role)) {
     return NextResponse.json({ error: "Entri otomatis hanya bisa diubah oleh Admin" }, { status: 403 });
   }
 
@@ -30,7 +32,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const entry = await prisma.devOpsMonitoringEntry.update({
       where: { id: params.id },
       data: {
-        ...(data.activityCategory != null ? { activityCategory: data.activityCategory } : {}),
+        ...(data.activityCategory != null ? { activityCategory: "Optimize" } : {}),
         ...(data.activity != null ? { activity: data.activity.trim() } : {}),
         ...(data.activityDate != null ? { activityDate: dateKeyToUtcDate(data.activityDate) } : {}),
         ...(data.application != null ? { application: data.application.trim() } : {}),
@@ -62,6 +64,9 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   const existing = await prisma.devOpsMonitoringEntry.findUnique({ where: { id: params.id } });
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  if (existing.rowType === DAILY_ROW_TYPE && !isAdmin(session.user.role)) {
+    return NextResponse.json({ error: "Baris monitoring harian tidak bisa dihapus" }, { status: 403 });
+  }
   if (existing.source === "auto" && !isAdmin(session.user.role)) {
     return NextResponse.json({ error: "Entri otomatis tidak bisa dihapus" }, { status: 403 });
   }

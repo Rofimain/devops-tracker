@@ -3,12 +3,11 @@ import { auth, isAdmin } from "@/lib/auth";
 import { canWriteAppData } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/topbar";
-import { ensureAutoDailyMonitoringEntry } from "@/lib/daily-monitoring";
+import { ensureDueDailyChecks } from "@/lib/daily-monitoring";
 import {
   addMonth,
   formatActivityDateDisplay,
   formatMonthParam,
-  isPastAutofillHourWib,
   monthDateRange,
   monthLabel,
   parseMonthParam,
@@ -25,24 +24,28 @@ export default async function MonitoringPage({ searchParams }: { searchParams: {
   const nowMonth = parseMonthParam();
   const isCurrentMonth = formatMonthParam(month) === formatMonthParam(nowMonth);
 
-  // Fallback jika cron belum jalan: setelah 15:00 WIB, buat entri otomatis saat halaman dibuka.
-  if (isCurrentMonth && isPastAutofillHourWib()) {
-    await ensureAutoDailyMonitoringEntry();
+  if (isCurrentMonth) {
+    await ensureDueDailyChecks();
   }
 
   const entries = await prisma.devOpsMonitoringEntry.findMany({
     where: { activityDate: range },
-    orderBy: [{ activityDate: "asc" }, { createdAt: "asc" }],
+    orderBy: [{ activityDate: "asc" }, { rowType: "asc" }, { createdAt: "asc" }],
   });
 
   const serialized: MonitoringEntryRow[] = entries.map((e) => ({
     id: e.id,
+    rowType: e.rowType,
     activityCategory: e.activityCategory,
     activity: e.activity,
     activityDate: e.activityDate.toISOString().slice(0, 10),
     activityDateDisplay: formatActivityDateDisplay(e.activityDate),
     application: e.application,
     status: e.status,
+    check1At: e.check1At?.toISOString() ?? null,
+    check1Status: e.check1Status,
+    check2At: e.check2At?.toISOString() ?? null,
+    check2Status: e.check2Status,
     source: e.source,
     userId: e.userId,
   }));

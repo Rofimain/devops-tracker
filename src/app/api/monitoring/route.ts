@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordActivity } from "@/lib/activity-log";
 import { canWriteAppData } from "@/lib/roles";
-import { monitoringEntrySchema } from "@/lib/daily-monitoring";
+import { monitoringEntrySchema, OPTIMIZE_ROW_TYPE } from "@/lib/daily-monitoring";
 import { dateKeyToUtcDate, monthDateRange, parseMonthParam } from "@/lib/monitoring-date";
 
 export async function GET(req: NextRequest) {
@@ -16,8 +16,7 @@ export async function GET(req: NextRequest) {
 
   const entries = await prisma.devOpsMonitoringEntry.findMany({
     where: { activityDate: range },
-    include: { user: { select: { id: true, name: true, email: true } } },
-    orderBy: [{ activityDate: "asc" }, { createdAt: "asc" }],
+    orderBy: [{ activityDate: "asc" }, { rowType: "asc" }, { createdAt: "asc" }],
   });
 
   return NextResponse.json({ month, entries });
@@ -37,7 +36,8 @@ export async function POST(req: NextRequest) {
 
     const entry = await prisma.devOpsMonitoringEntry.create({
       data: {
-        activityCategory: parsed.data.activityCategory,
+        rowType: OPTIMIZE_ROW_TYPE,
+        activityCategory: "Optimize",
         activity: parsed.data.activity.trim(),
         activityDate: dateKeyToUtcDate(parsed.data.activityDate),
         application: parsed.data.application.trim(),
@@ -45,7 +45,6 @@ export async function POST(req: NextRequest) {
         source: "manual",
         userId: session.user.id,
       },
-      include: { user: { select: { id: true, name: true, email: true } } },
     });
 
     await recordActivity(req, {

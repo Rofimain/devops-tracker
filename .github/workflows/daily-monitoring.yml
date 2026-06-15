@@ -2,17 +2,36 @@ name: Daily Monitoring Auto-fill
 
 on:
   schedule:
-    # 15:00 WIB = 08:00 UTC
-    - cron: "0 8 * * *"
+    # Daily Check 1 — ~12:05 WIB (05:05 UTC), window 11:00–12:00 WIB
+    - cron: "5 5 * * *"
+    # Daily Check 2 — ~21:05 WIB (14:05 UTC), window 20:00–21:00 WIB
+    - cron: "5 14 * * *"
   workflow_dispatch:
+    inputs:
+      slot:
+        description: "Check slot (1 or 2)"
+        required: true
+        default: "1"
 
 jobs:
-  autofill:
-    name: Create daily monitoring entry
+  check1:
+    name: Daily Check 1 (11:00–12:00 WIB)
     runs-on: ubuntu-latest
+    if: github.event.schedule == '5 5 * * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.slot == '1')
     steps:
       - name: Trigger cron endpoint
         run: |
           curl -sf -X POST \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "${{ secrets.APP_URL }}/api/cron/daily-monitoring"
+            "${{ secrets.APP_URL }}/api/cron/daily-monitoring?slot=1"
+
+  check2:
+    name: Daily Check 2 (20:00–21:00 WIB)
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '5 14 * * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.slot == '2')
+    steps:
+      - name: Trigger cron endpoint
+        run: |
+          curl -sf -X POST \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/daily-monitoring?slot=2"

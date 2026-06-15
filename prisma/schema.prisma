@@ -168,20 +168,29 @@ model Activity {
 
 /// Laporan aktivitas DevOps daily monitoring (auto + manual).
 model DevOpsMonitoringEntry {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
+  /// daily = satu baris per hari (2x checking); optimize = entri manual
+  rowType          String    @default("optimize")
   activityCategory String
   activity         String
-  activityDate     DateTime @db.Date
+  activityDate     DateTime  @db.Date
   application      String
-  status           String   @default("Done")
-  /// auto = entri harian otomatis jam 15:00 WIB; manual = diisi pengguna
-  source           String   @default("manual")
+  status           String    @default("Done")
+  check1At         DateTime?
+  check1Status     String?
+  check2At         DateTime?
+  check2Status     String?
+  /// Kunci unik baris daily per hari (YYYY-MM-DD WIB); null untuk entri optimize
+  dailyDateKey     String?   @unique
+  /// auto = baris daily otomatis; manual = optimize diisi pengguna
+  source           String    @default("manual")
   userId           String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  user             User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([activityDate])
+  @@index([rowType, activityDate])
   @@index([source, activityDate])
 }
 

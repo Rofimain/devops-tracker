@@ -6,9 +6,10 @@ import Link from "next/link";
 import { statusBadgeClass, statusLabel } from "@/lib/utils";
 import { displayExternalUrl, displayRepoUrl, normalizeExternalUrl } from "@/lib/external-url";
 import { resolveInfraUrl } from "@/lib/project-env-url";
+import { formatUsd, parseCostLineItems, sumCostItems } from "@/lib/project-cost";
 import { ProjectDetailTabs } from "./project-detail-tabs";
 import { ProjectDetailTopbar } from "./project-detail-topbar";
-import { Edit, Plus, ExternalLink } from "lucide-react";
+import { Edit, Plus, Globe, GitBranch, Server, DollarSign, UserRound } from "lucide-react";
 import { ProjectDeleteButton } from "./project-delete-button";
 
 export default async function ProjectDetailPage({ params }: { params: { id: string } }) {
@@ -29,8 +30,22 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
   ]);
   if (!project) notFound();
 
-  const initials = project.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-  const primaryUrl = resolveInfraUrl("production", project.infras.find((i) => i.envName.toLowerCase() === "production")?.url, project.url);
+  const initials = project.name
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+  const primaryUrl = resolveInfraUrl(
+    "production",
+    project.infras.find((i) => i.envName.toLowerCase() === "production")?.url,
+    project.url,
+  );
+  const costTotal = (project.infras ?? []).reduce(
+    (sum, inf) => sum + sumCostItems(parseCostLineItems(inf.costItems)),
+    0,
+  );
+  const primaryHosting = (project.infras ?? []).flatMap((i) => i.hosting ?? []).find(Boolean);
 
   return (
     <>
@@ -39,49 +54,77 @@ export default async function ProjectDetailPage({ params }: { params: { id: stri
         currentName={project.name}
         projects={allProjects}
         action={
-          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-            <span className={`badge ${statusBadgeClass(project.status)}`}>{statusLabel(project.status)}</span>
-            {canWrite ? (
-              <>
-                <Link href={`/projects/${project.slug}/edit`} className="btn btn-sm"><Edit size={12} /> Edit</Link>
-                <Link href={`/projects/${project.slug}/tools/add`} className="btn btn-primary btn-sm"><Plus size={12} /> Add Tool</Link>
-                <ProjectDeleteButton projectId={project.id} projectName={project.name} />
-              </>
-            ) : null}
-          </div>
+          canWrite ? (
+            <div className="project-topbar-actions">
+              <Link href={`/projects/${project.slug}/edit`} className="btn btn-sm">
+                <Edit size={12} /> Edit
+              </Link>
+              <Link href={`/projects/${project.slug}/tools/add`} className="btn btn-primary btn-sm">
+                <Plus size={12} /> Add Tool
+              </Link>
+              <ProjectDeleteButton projectId={project.id} projectName={project.name} />
+            </div>
+          ) : undefined
         }
       />
       <div className="app-content">
-
-        {/* Detail Header */}
         <div className="detail-header">
           <div className="project-avatar">{initials}</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 3 }}>{project.name}</div>
-            <div style={{ fontSize: 12, color: "var(--text-muted)", marginBottom: 10 }}>{project.description ?? "No description."}</div>
-            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {primaryUrl && (
-                <a href={primaryUrl} target="_blank" rel="noopener noreferrer" className="tag" style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 3 }}>
-                  🌐 {displayExternalUrl(primaryUrl)}
-                  <ExternalLink size={9} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="project-detail-title-row">
+              <h1 className="project-detail-title">{project.name}</h1>
+              <span className={`badge ${statusBadgeClass(project.status)}`}>{statusLabel(project.status)}</span>
+            </div>
+            <p className="project-detail-desc">
+              {project.description?.trim() ? project.description : "Belum ada deskripsi project."}
+            </p>
+            <div className="project-meta-row">
+              {primaryUrl ? (
+                <a href={primaryUrl} target="_blank" rel="noopener noreferrer" className="project-meta-chip">
+                  <Globe size={12} />
+                  {displayExternalUrl(primaryUrl)}
                 </a>
-              )}
-              {project.repoUrl && (
-                <a href={normalizeExternalUrl(project.repoUrl)!} target="_blank" rel="noopener noreferrer" className="tag" style={{ color: "var(--accent)", display: "flex", alignItems: "center", gap: 3 }}>
-                  📦 {displayRepoUrl(project.repoUrl)}
-                  <ExternalLink size={9} />
+              ) : null}
+              {project.repoUrl ? (
+                <a
+                  href={normalizeExternalUrl(project.repoUrl)!}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="project-meta-chip"
+                >
+                  <GitBranch size={12} />
+                  {displayRepoUrl(project.repoUrl)}
                 </a>
-              )}
-              {(project.infras ?? [])[0]?.hosting?.[0] && <span className="tag">🖥 {(project.infras ?? [])[0].hosting[0]}</span>}
-              {project.costPerMonth?.trim() && <span className="tag">💰 {project.costPerMonth}</span>}
-              {project.management && <span className="tag">👤 {project.management}</span>}
+              ) : null}
+              {primaryHosting ? (
+                <span className="project-meta-chip">
+                  <Server size={12} />
+                  {primaryHosting}
+                </span>
+              ) : null}
+              {costTotal > 0 ? (
+                <span className="project-meta-chip">
+                  <DollarSign size={12} />
+                  {formatUsd(costTotal)}/mo
+                </span>
+              ) : project.costPerMonth?.trim() ? (
+                <span className="project-meta-chip">
+                  <DollarSign size={12} />
+                  {project.costPerMonth}
+                </span>
+              ) : null}
+              {project.management?.trim() ? (
+                <span className="project-meta-chip">
+                  <UserRound size={12} />
+                  {project.management}
+                </span>
+              ) : null}
+              {project.category ? <span className="badge badge-blue">{project.category}</span> : null}
             </div>
           </div>
         </div>
 
-        {/* Tabs */}
         <ProjectDetailTabs project={project as any} canWrite={canWrite} />
-
       </div>
     </>
   );

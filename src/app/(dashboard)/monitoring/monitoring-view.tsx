@@ -3,18 +3,35 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Activity, ChevronLeft, ChevronRight, ClipboardCheck, Loader2, Pencil, Plus, Trash2 } from "lucide-react";
+import {
+  Activity,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  ClipboardCheck,
+  Clock,
+  Loader2,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-import { MONITORING_CATEGORIES, MONITORING_STATUSES } from "@/lib/daily-monitoring";
+import { CHECK_SLOTS, DAILY_ROW_TYPE, MONITORING_STATUSES } from "@/lib/daily-monitoring";
+import { formatWibTime } from "@/lib/monitoring-date";
 
 export type MonitoringEntryRow = {
   id: string;
+  rowType: string;
   activityCategory: string;
   activity: string;
   activityDate: string;
   activityDateDisplay: string;
   application: string;
   status: string;
+  check1At: string | null;
+  check1Status: string | null;
+  check2At: string | null;
+  check2Status: string | null;
   source: string;
   userId: string | null;
 };
@@ -32,8 +49,62 @@ function statusBadgeClass(status: string) {
   }
 }
 
+function DailyCheckCell({
+  at,
+  status,
+  windowLabel,
+}: {
+  at: string | null;
+  status: string | null;
+  windowLabel: string;
+}) {
+  if (status === "Done" && at) {
+    return (
+      <div
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "6px 10px",
+          borderRadius: 8,
+          background: "var(--green-bg, rgba(34, 197, 94, 0.12))",
+          border: "1px solid rgba(34, 197, 94, 0.25)",
+          minWidth: 120,
+        }}
+      >
+        <CheckCircle2 size={15} style={{ color: "var(--green, #16a34a)", flexShrink: 0 }} />
+        <div style={{ lineHeight: 1.25 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-primary)" }}>{formatWibTime(at)}</div>
+          <div style={{ fontSize: 10, color: "var(--green, #16a34a)", fontWeight: 600 }}>Done</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 7,
+        padding: "6px 10px",
+        borderRadius: 8,
+        background: "var(--surface)",
+        border: "1px dashed var(--border)",
+        minWidth: 120,
+      }}
+      title={windowLabel}
+    >
+      <Clock size={14} style={{ color: "var(--text-muted)", flexShrink: 0 }} />
+      <div style={{ lineHeight: 1.25 }}>
+        <div style={{ fontSize: 11, fontWeight: 600, color: "var(--text-muted)" }}>Menunggu</div>
+        <div style={{ fontSize: 9, color: "var(--text-hint)" }}>{windowLabel}</div>
+      </div>
+    </div>
+  );
+}
+
 type FormState = {
-  activityCategory: (typeof MONITORING_CATEGORIES)[number];
   activity: string;
   activityDate: string;
   application: string;
@@ -41,7 +112,6 @@ type FormState = {
 };
 
 const emptyForm = (date: string): FormState => ({
-  activityCategory: "Monitoring",
   activity: "",
   activityDate: date,
   application: "All Website Asset",
@@ -96,7 +166,7 @@ export function MonitoringView({
       const res = await fetch("/api/monitoring", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, activityCategory: "Optimize" }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -122,7 +192,7 @@ export function MonitoringView({
       const res = await fetch(`/api/monitoring/${editing.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify({ ...editForm, activityCategory: "Optimize" }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -160,7 +230,9 @@ export function MonitoringView({
   };
 
   const canManageEntry = (entry: MonitoringEntryRow) =>
-    canMutate && (entry.source === "manual" || isAdmin);
+    canMutate && entry.rowType !== DAILY_ROW_TYPE && (entry.source === "manual" || isAdmin);
+
+  const colSpan = canMutate ? 9 : 8;
 
   return (
     <div>
@@ -193,10 +265,6 @@ export function MonitoringView({
               <h2 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: "var(--text-primary)" }}>
                 DevOps Daily Monitoring
               </h2>
-              <p style={{ margin: "6px 0 0", fontSize: 13, color: "var(--text-secondary)", maxWidth: 560, lineHeight: 1.5 }}>
-                Laporan aktivitas monitoring harian. Entri &quot;Daily monitoring&quot; otomatis terisi setiap hari jam 15:00 WIB.
-                Anda tetap bisa menambah entri manual untuk aktivitas lain.
-              </p>
             </div>
           </div>
           {canMutate && (
@@ -209,7 +277,7 @@ export function MonitoringView({
                 setShowForm((v) => !v);
               }}
             >
-              <Plus size={14} /> Entri manual
+              <Plus size={14} /> Entri Optimize
             </button>
           )}
         </div>
@@ -231,9 +299,7 @@ export function MonitoringView({
           >
             <Activity size={14} style={{ color: "var(--text-muted)" }} />
             <span style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{monthHuman}</span>
-            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
-              {entries.length} entri
-            </span>
+            <span style={{ fontSize: 12, color: "var(--text-muted)" }}>{entries.length} entri</span>
           </div>
           <Link href={nextHref} className="btn" style={{ padding: "8px 11px" }} aria-label="Bulan berikutnya">
             <ChevronRight size={18} />
@@ -247,7 +313,10 @@ export function MonitoringView({
       </header>
 
       {err ? (
-        <div className="alert-warning" style={{ background: "var(--red-bg)", borderColor: "var(--red)", color: "var(--red-text)", marginBottom: 16 }}>
+        <div
+          className="alert-warning"
+          style={{ background: "var(--red-bg)", borderColor: "var(--red)", color: "var(--red-text)", marginBottom: 16 }}
+        >
           {err}
         </div>
       ) : null}
@@ -255,25 +324,18 @@ export function MonitoringView({
       {showForm && canMutate && (
         <form onSubmit={submitNew} className="card" style={{ marginBottom: 16 }}>
           <div className="card-header">
-            <span className="card-title">Tambah entri manual</span>
+            <span className="card-title">Tambah entri Optimize</span>
             <button type="button" className="btn btn-sm" onClick={() => setShowForm(false)}>
               Tutup
             </button>
           </div>
-          <div className="card-body" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+          <div
+            className="card-body"
+            style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}
+          >
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Activity Category</label>
-              <select
-                className="form-select"
-                value={form.activityCategory}
-                onChange={(e) => setForm({ ...form, activityCategory: e.target.value as FormState["activityCategory"] })}
-              >
-                {MONITORING_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+              <input className="form-input" value="Optimize" readOnly disabled />
             </div>
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Activity *</label>
@@ -299,7 +361,7 @@ export function MonitoringView({
                 className="form-input"
                 value={form.application}
                 onChange={(e) => setForm({ ...form, application: e.target.value })}
-                placeholder="All Website Asset"
+                placeholder="comofootball.com"
               />
             </div>
             <div className="form-group" style={{ margin: 0 }}>
@@ -328,26 +390,15 @@ export function MonitoringView({
       {editing && canMutate && (
         <form onSubmit={saveEdit} className="card" style={{ marginBottom: 16 }}>
           <div className="card-header">
-            <span className="card-title">Edit entri</span>
+            <span className="card-title">Edit entri Optimize</span>
             <button type="button" className="btn btn-sm" onClick={() => setEditing(null)}>
               Batal
             </button>
           </div>
-          <div className="card-body" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label">Activity Category</label>
-              <select
-                className="form-select"
-                value={editForm.activityCategory}
-                onChange={(e) => setEditForm({ ...editForm, activityCategory: e.target.value as FormState["activityCategory"] })}
-              >
-                {MONITORING_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div
+            className="card-body"
+            style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}
+          >
             <div className="form-group" style={{ margin: 0 }}>
               <label className="form-label">Activity</label>
               <input className="form-input" value={editForm.activity} onChange={(e) => setEditForm({ ...editForm, activity: e.target.value })} />
@@ -396,75 +447,107 @@ export function MonitoringView({
           <table className="data-table">
             <thead>
               <tr>
-                <th style={{ width: 48 }}>No</th>
-                <th>Activity Category</th>
-                <th>Activity</th>
-                <th style={{ minWidth: 140 }}>Date</th>
+                <th style={{ width: 40 }}>No</th>
+                <th style={{ minWidth: 130 }}>Date</th>
                 <th>Application</th>
-                <th style={{ width: 100 }}>Status</th>
-                {canMutate && <th style={{ width: 90 }}>Action</th>}
+                <th style={{ minWidth: 140 }}>Daily Check 1</th>
+                <th style={{ minWidth: 140 }}>Daily Check 2</th>
+                <th>Category</th>
+                <th>Activity</th>
+                <th style={{ width: 90 }}>Status</th>
+                {canMutate && <th style={{ width: 80 }}>Action</th>}
               </tr>
             </thead>
             <tbody>
               {entries.length === 0 ? (
                 <tr>
-                  <td colSpan={canMutate ? 7 : 6} style={{ textAlign: "center", padding: "40px 0", color: "var(--text-muted)" }}>
+                  <td colSpan={colSpan} style={{ textAlign: "center", padding: "40px 0", color: "var(--text-muted)" }}>
                     {isCurrentMonth
-                      ? "Belum ada entri bulan ini. Entri harian otomatis akan muncul setiap jam 15:00 WIB."
+                      ? "Belum ada entri bulan ini. Daily checking otomatis terisi setelah jendela 11:00–12:00 dan 20:00–21:00 WIB."
                       : "Tidak ada entri untuk bulan ini."}
                   </td>
                 </tr>
               ) : (
-                entries.map((entry, i) => (
-                  <tr key={entry.id}>
-                    <td style={{ color: "var(--text-muted)" }}>{i + 1}</td>
-                    <td style={{ fontSize: 12 }}>{entry.activityCategory}</td>
-                    <td>
-                      <span style={{ fontWeight: 500 }}>{entry.activity}</span>
-                    </td>
-                    <td style={{ fontSize: 12, whiteSpace: "nowrap" }}>{entry.activityDateDisplay}</td>
-                    <td style={{ fontSize: 12 }}>{entry.application}</td>
-                    <td>
-                      <span className={cn("badge", statusBadgeClass(entry.status))}>{entry.status}</span>
-                    </td>
-                    {canMutate && (
+                entries.map((entry, i) => {
+                  const isDaily = entry.rowType === DAILY_ROW_TYPE;
+                  return (
+                    <tr key={entry.id}>
+                      <td style={{ color: "var(--text-muted)" }}>{i + 1}</td>
+                      <td style={{ fontSize: 12, whiteSpace: "nowrap" }}>{entry.activityDateDisplay}</td>
+                      <td style={{ fontSize: 12 }}>{entry.application}</td>
                       <td>
-                        {canManageEntry(entry) && (
-                          <div style={{ display: "flex", gap: 4 }}>
-                            <button
-                              type="button"
-                              className="btn btn-sm"
-                              disabled={busy}
-                              title="Edit"
-                              onClick={() => {
-                                setShowForm(false);
-                                setEditForm({
-                                  activityCategory: entry.activityCategory as FormState["activityCategory"],
-                                  activity: entry.activity,
-                                  activityDate: entry.activityDate,
-                                  application: entry.application,
-                                  status: entry.status as FormState["status"],
-                                });
-                                setEditing(entry);
-                              }}
-                            >
-                              <Pencil size={13} />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-danger"
-                              disabled={busy}
-                              title="Hapus"
-                              onClick={() => remove(entry)}
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          </div>
+                        {isDaily ? (
+                          <DailyCheckCell
+                            at={entry.check1At}
+                            status={entry.check1Status}
+                            windowLabel={CHECK_SLOTS[1].windowLabel}
+                          />
+                        ) : (
+                          <span style={{ color: "var(--text-hint)" }}>—</span>
                         )}
                       </td>
-                    )}
-                  </tr>
-                ))
+                      <td>
+                        {isDaily ? (
+                          <DailyCheckCell
+                            at={entry.check2At}
+                            status={entry.check2Status}
+                            windowLabel={CHECK_SLOTS[2].windowLabel}
+                          />
+                        ) : (
+                          <span style={{ color: "var(--text-hint)" }}>—</span>
+                        )}
+                      </td>
+                      <td style={{ fontSize: 12 }}>
+                        {isDaily ? (
+                          <span className="badge badge-blue">{entry.activityCategory}</span>
+                        ) : (
+                          <span className="badge badge-purple">{entry.activityCategory}</span>
+                        )}
+                      </td>
+                      <td>
+                        <span style={{ fontWeight: 500, fontSize: 12 }}>{entry.activity}</span>
+                      </td>
+                      <td>
+                        <span className={cn("badge", statusBadgeClass(entry.status))}>{entry.status}</span>
+                      </td>
+                      {canMutate && (
+                        <td>
+                          {canManageEntry(entry) && (
+                            <div style={{ display: "flex", gap: 4 }}>
+                              <button
+                                type="button"
+                                className="btn btn-sm"
+                                disabled={busy}
+                                title="Edit"
+                                onClick={() => {
+                                  setShowForm(false);
+                                  setEditForm({
+                                    activity: entry.activity,
+                                    activityDate: entry.activityDate,
+                                    application: entry.application,
+                                    status: entry.status as FormState["status"],
+                                  });
+                                  setEditing(entry);
+                                }}
+                              >
+                                <Pencil size={13} />
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-danger"
+                                disabled={busy}
+                                title="Hapus"
+                                onClick={() => remove(entry)}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -473,7 +556,7 @@ export function MonitoringView({
 
       {!canMutate && (
         <p style={{ marginTop: 12, fontSize: 12, color: "var(--text-muted)" }}>
-          Role Member hanya dapat melihat laporan. Menambah atau mengubah entri hanya untuk Admin / Super Admin.
+          Role Member hanya dapat melihat laporan. Menambah entri Optimize hanya untuk Admin / Super Admin.
         </p>
       )}
     </div>
