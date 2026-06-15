@@ -24,6 +24,18 @@ export const monitoringEntrySchema = z.object({
 
 export const monitoringPatchSchema = monitoringEntrySchema.partial();
 
+export const CHECK_STATUSES = ["Done", "In Progress", "Pending"] as const;
+
+export const dailyMonitoringPatchSchema = z.object({
+  application: z.string().min(1).max(300).optional(),
+  status: z.enum(MONITORING_STATUSES).optional(),
+  check1Status: z.enum(CHECK_STATUSES).optional(),
+  check2Status: z.enum(CHECK_STATUSES).optional(),
+  /** Jam WIB HH:mm pada tanggal baris */
+  check1Time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+  check2Time: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+});
+
 export const AUTO_DAILY_ROW = {
   rowType: DAILY_ROW_TYPE,
   activityCategory: "Monitoring",

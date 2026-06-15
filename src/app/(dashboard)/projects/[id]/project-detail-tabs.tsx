@@ -78,12 +78,15 @@ export function ProjectDetailTabs({ project, canWrite = true }: { project: any; 
               {(project.infras ?? []).length > 0
                 ? (project.infras ?? []).map((inf: any) => {
                     const href = resolveInfraUrl(inf.envName, inf.url, project.url);
-                    if (!href) return null;
                     return (
                       <DlRow key={inf.id ?? inf.envName} label={envUrlLabel(inf.envName)}>
-                        <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
-                          {displayExternalUrl(href)}
-                        </a>
+                        {href ? (
+                          <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
+                            {displayExternalUrl(href)}
+                          </a>
+                        ) : (
+                          <span style={{ color: "var(--text-muted)", fontSize: 12 }}>—</span>
+                        )}
                       </DlRow>
                     );
                   })
@@ -150,7 +153,9 @@ export function ProjectDetailTabs({ project, canWrite = true }: { project: any; 
               </div>
             ) : (
               <div className="project-env-grid">
-                {(project.infras ?? []).map((inf: any) => (
+                {(project.infras ?? []).map((inf: any) => {
+                  const envHref = resolveInfraUrl(inf.envName, inf.url, project.url);
+                  return (
                   <div key={inf.id ?? inf.envName} className="project-env-card">
                     <div className="project-env-card-head">
                       <span>{inf.envName}</span>
@@ -161,6 +166,21 @@ export function ProjectDetailTabs({ project, canWrite = true }: { project: any; 
                       ) : null}
                     </div>
                     <div className="project-env-card-body">
+                      <EnvKv
+                        label="URL"
+                        value={
+                          envHref ? (
+                            <a
+                              href={envHref}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: "var(--accent)", fontSize: 11, wordBreak: "break-all" }}
+                            >
+                              {displayExternalUrl(envHref)}
+                            </a>
+                          ) : null
+                        }
+                      />
                       <EnvKv label="Target Group" value={inf.targetGroup || null} />
                       <EnvKv label="Load Balancer" value={inf.loadBalancer || null} />
                       <EnvKv label="Server IP" value={inf.serverIp || null} />
@@ -169,7 +189,8 @@ export function ProjectDetailTabs({ project, canWrite = true }: { project: any; 
                       <EnvKv label="Database" value={tagList(inf.databases ?? [])} />
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

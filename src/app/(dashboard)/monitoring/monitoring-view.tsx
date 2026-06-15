@@ -16,8 +16,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CHECK_SLOTS, DAILY_ROW_TYPE, MONITORING_STATUSES } from "@/lib/daily-monitoring";
-import { formatWibTime } from "@/lib/monitoring-date";
+import { CHECK_SLOTS, CHECK_STATUSES, DAILY_ROW_TYPE, MONITORING_STATUSES } from "@/lib/daily-monitoring";
+import { formatWibTime, wibTimeInputFromIso } from "@/lib/monitoring-date";
 
 export type MonitoringEntryRow = {
   id: string;
@@ -118,6 +118,24 @@ const emptyForm = (date: string): FormState => ({
   status: "Done",
 });
 
+type DailyEditForm = {
+  application: string;
+  status: (typeof MONITORING_STATUSES)[number];
+  check1Status: (typeof CHECK_STATUSES)[number];
+  check1Time: string;
+  check2Status: (typeof CHECK_STATUSES)[number];
+  check2Time: string;
+};
+
+const dailyEditFromEntry = (entry: MonitoringEntryRow): DailyEditForm => ({
+  application: entry.application,
+  status: entry.status as DailyEditForm["status"],
+  check1Status: (entry.check1Status ?? "Pending") as DailyEditForm["check1Status"],
+  check1Time: entry.check1At ? wibTimeInputFromIso(entry.check1At) : "11:30",
+  check2Status: (entry.check2Status ?? "Pending") as DailyEditForm["check2Status"],
+  check2Time: entry.check2At ? wibTimeInputFromIso(entry.check2At) : "20:30",
+});
+
 export function MonitoringView({
   initialEntries,
   monthHuman,
@@ -147,6 +165,7 @@ export function MonitoringView({
   const [form, setForm] = useState<FormState>(() => emptyForm(todayWib));
   const [editing, setEditing] = useState<MonitoringEntryRow | null>(null);
   const [editForm, setEditForm] = useState<FormState>(() => emptyForm(todayWib));
+  const [dailyEditForm, setDailyEditForm] = useState<DailyEditForm | null>(null);
 
   useEffect(() => {
     setEntries(initialEntries);
@@ -189,10 +208,22 @@ export function MonitoringView({
     setBusy(true);
     setErr("");
     try {
+      const isDaily = editing.rowType === DAILY_ROW_TYPE;
+      const body = isDaily && dailyEditForm
+        ? {
+            application: dailyEditForm.application,
+            status: dailyEditForm.status,
+            check1Status: dailyEditForm.check1Status,
+            check2Status: dailyEditForm.check2Status,
+            ...(dailyEditForm.check1Status === "Done" ? { check1Time: dailyEditForm.check1Time } : {}),
+            ...(dailyEditForm.check2Status === "Done" ? { check2Time: dailyEditForm.check2Time } : {}),
+          }
+        : { ...editForm, activityCategory: "Optimize" };
+
       const res = await fetch(`/api/monitoring/${editing.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...editForm, activityCategory: "Optimize" }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -200,6 +231,7 @@ export function MonitoringView({
         return;
       }
       setEditing(null);
+      setDailyEditForm(null);
       refresh();
     } catch {
       setErr("Gagal menyimpan");
@@ -228,6 +260,9 @@ export function MonitoringView({
       setBusy(false);
     }
   };
+
+  const canEditDaily = (entry: MonitoringEntryRow) =>
+    canMutate && isAdmin && entry.rowType === DAILY_ROW_TYPE;
 
   const canManageEntry = (entry: MonitoringEntryRow) =>
     canMutate && entry.rowType !== DAILY_ROW_TYPE && (entry.source === "manual" || isAdmin);
@@ -390,11 +425,126 @@ export function MonitoringView({
       {editing && canMutate && (
         <form onSubmit={saveEdit} className="card" style={{ marginBottom: 16 }}>
           <div className="card-header">
-            <span className="card-title">Edit entri Optimize</span>
-            <button type="button" className="btn btn-sm" onClick={() => setEditing(null)}>
+            <span className="card-title">
+              {editing.rowType === DAILY_ROW_TYPE ? "Edit daily monitoring" : "Edit entri Optimize"}
+            </span>
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={() => {
+                setEditing(null);
+                setDailyEditForm(null);
+              }}
+            >
               Batal
             </button>
           </div>
+          {editing.rowType === DAILY_ROW_TYPE && dailyEditForm ? (
+            <div
+              className="card-body"
+              style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}
+            >
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">Date</label>
+                <input className="form-input" value={editing.activityDateDisplay} readOnly disabled />
+              </div>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">Application</label>
+                <input
+                  className="form-input"
+                  value={dailyEditForm.application}
+                  onChange={(e) => setDailyEditForm({ ...dailyEditForm, application: e.target.value })}
+                />
+              </div>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">Daily Check 1 — Status</label>
+                <select
+                  className="form-select"
+                  value={dailyEditForm.check1Status}
+                  onChange={(e) =>
+                    setDailyEditForm({
+                      ...dailyEditForm,
+                      check1Status: e.target.value as DailyEditForm["check1Status"],
+                    })
+                  }
+                >
+                  {CHECK_STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {dailyEditForm.check1Status === "Done" && (
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">Daily Check 1 — Jam (WIB)</label>
+                  <input
+                    className="form-input"
+                    type="time"
+                    value={dailyEditForm.check1Time}
+                    onChange={(e) => setDailyEditForm({ ...dailyEditForm, check1Time: e.target.value })}
+                  />
+                  <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4 }}>
+                    Jendela otomatis: {CHECK_SLOTS[1].windowLabel}
+                  </div>
+                </div>
+              )}
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">Daily Check 2 — Status</label>
+                <select
+                  className="form-select"
+                  value={dailyEditForm.check2Status}
+                  onChange={(e) =>
+                    setDailyEditForm({
+                      ...dailyEditForm,
+                      check2Status: e.target.value as DailyEditForm["check2Status"],
+                    })
+                  }
+                >
+                  {CHECK_STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {dailyEditForm.check2Status === "Done" && (
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label">Daily Check 2 — Jam (WIB)</label>
+                  <input
+                    className="form-input"
+                    type="time"
+                    value={dailyEditForm.check2Time}
+                    onChange={(e) => setDailyEditForm({ ...dailyEditForm, check2Time: e.target.value })}
+                  />
+                  <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4 }}>
+                    Jendela otomatis: {CHECK_SLOTS[2].windowLabel}
+                  </div>
+                </div>
+              )}
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label">Status baris</label>
+                <select
+                  className="form-select"
+                  value={dailyEditForm.status}
+                  onChange={(e) =>
+                    setDailyEditForm({ ...dailyEditForm, status: e.target.value as DailyEditForm["status"] })
+                  }
+                >
+                  {MONITORING_STATUSES.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display: "flex", alignItems: "flex-end" }}>
+                <button type="submit" className="btn btn-primary" disabled={busy} style={{ width: "100%" }}>
+                  {busy ? <Loader2 size={16} className="logbook-spin" /> : "Simpan perubahan"}
+                </button>
+              </div>
+            </div>
+          ) : (
           <div
             className="card-body"
             style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}
@@ -436,6 +586,7 @@ export function MonitoringView({
               </button>
             </div>
           </div>
+          )}
         </form>
       )}
 
@@ -512,7 +663,7 @@ export function MonitoringView({
                       </td>
                       {canMutate && (
                         <td>
-                          {canManageEntry(entry) && (
+                          {(canEditDaily(entry) || canManageEntry(entry)) && (
                             <div style={{ display: "flex", gap: 4 }}>
                               <button
                                 type="button"
@@ -521,17 +672,23 @@ export function MonitoringView({
                                 title="Edit"
                                 onClick={() => {
                                   setShowForm(false);
-                                  setEditForm({
-                                    activity: entry.activity,
-                                    activityDate: entry.activityDate,
-                                    application: entry.application,
-                                    status: entry.status as FormState["status"],
-                                  });
+                                  if (entry.rowType === DAILY_ROW_TYPE) {
+                                    setDailyEditForm(dailyEditFromEntry(entry));
+                                  } else {
+                                    setDailyEditForm(null);
+                                    setEditForm({
+                                      activity: entry.activity,
+                                      activityDate: entry.activityDate,
+                                      application: entry.application,
+                                      status: entry.status as FormState["status"],
+                                    });
+                                  }
                                   setEditing(entry);
                                 }}
                               >
                                 <Pencil size={13} />
                               </button>
+                              {canManageEntry(entry) && (
                               <button
                                 type="button"
                                 className="btn btn-sm btn-danger"
@@ -541,6 +698,7 @@ export function MonitoringView({
                               >
                                 <Trash2 size={13} />
                               </button>
+                              )}
                             </div>
                           )}
                         </td>

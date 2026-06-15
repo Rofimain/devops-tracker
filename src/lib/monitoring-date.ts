@@ -48,6 +48,19 @@ export function formatWibTime(iso: string | Date): string {
   return `${wibTimeFmt.format(d)} WIB`;
 }
 
+/** ISO timestamp → HH:mm (WIB) untuk input form. */
+export function wibTimeInputFromIso(iso: string | Date): string {
+  const d = typeof iso === "string" ? new Date(iso) : iso;
+  return wibTimeFmt.format(d);
+}
+
+/** Tanggal + jam WIB (HH:mm) → Date UTC untuk disimpan di DB. */
+export function wibTimeOnDateToUtc(dateKey: string, hhmm: string): Date {
+  const [y, mo, d] = dateKey.split("-").map(Number);
+  const [hour, minute] = hhmm.split(":").map(Number);
+  return new Date(Date.UTC(y, mo - 1, d, hour - 7, minute, 0));
+}
+
 /** Parse ?month=2026-06 atau ?month=2026-06-15 → { year, month } (1-indexed). */
 export function parseMonthParam(param?: string): MonthParts {
   const now = new Date();
