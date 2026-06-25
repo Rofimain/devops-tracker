@@ -6,7 +6,19 @@ import { Search } from "lucide-react";
 
 interface Filter { label: string; value: string; }
 
-export function ProjectFilters({ filters, currentStatus, currentQ }: { filters: Filter[]; currentStatus: string; currentQ: string; }) {
+export function ProjectFilters({
+  filters,
+  currentStatus,
+  currentQ,
+  currentSort,
+  currentDir,
+}: {
+  filters: Filter[];
+  currentStatus: string;
+  currentQ: string;
+  currentSort?: string;
+  currentDir?: string;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const [q, setQ] = useState(currentQ);
@@ -16,6 +28,8 @@ export function ProjectFilters({ filters, currentStatus, currentQ }: { filters: 
     const params = new URLSearchParams();
     if (status && status !== "ALL") params.set("status", status);
     if (query) params.set("q", query);
+    if (currentSort) params.set("sort", currentSort);
+    if (currentDir) params.set("dir", currentDir);
     startTransition(() => router.push(`${pathname}?${params.toString()}`));
   };
 

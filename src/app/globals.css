@@ -186,6 +186,16 @@ table.data-table th { padding: 8px 12px; text-align: left; font-weight: 600; col
 table.data-table td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; color: var(--text-primary); }
 table.data-table tr:last-child td { border-bottom: none; }
 table.data-table tbody tr:hover td { background: var(--bg-hover); }
+table.data-table .table-sort-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: inherit;
+  text-decoration: none;
+}
+table.data-table .table-sort-link:hover { color: var(--text-primary); }
+table.data-table .table-sort-icon { opacity: 0.35; flex-shrink: 0; }
+table.data-table .table-sort-icon.active { opacity: 1; color: var(--accent); }
 table.data-table .col-infra { background: rgba(37, 99, 235, 0.05); }
 .dark table.data-table .col-infra { background: rgba(59, 130, 246, 0.06); }
 

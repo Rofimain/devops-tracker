@@ -7,14 +7,18 @@ import { displayExternalUrl, normalizeExternalUrl } from "@/lib/external-url";
 import { statusBadgeClass, statusLabel } from "@/lib/utils";
 import { Plus } from "lucide-react";
 import { ProjectFilters } from "./project-filters";
+import { parseProjectSort } from "./project-sort";
+import { ProjectSortableTh } from "./project-table-head";
 
 export default async function ProjectsPage({
   searchParams,
 }: {
-  searchParams: { status?: string; q?: string };
+  searchParams: { status?: string; q?: string; sort?: string; dir?: string };
 }) {
   const session = await auth();
   const canWrite = canWriteAppData(session?.user?.role);
+  const sortState = { status: searchParams.status, q: searchParams.q, sort: searchParams.sort, dir: searchParams.dir };
+  const { orderBy } = parseProjectSort(searchParams.sort, searchParams.dir);
 
   const where: any = {};
   if (searchParams.status && searchParams.status !== "ALL") where.status = searchParams.status;
@@ -29,7 +33,7 @@ export default async function ProjectsPage({
   const [projects, counts] = await Promise.all([
     prisma.project.findMany({
       where,
-      orderBy: { updatedAt: "desc" },
+      orderBy,
       select: {
         id: true,
         slug: true,
@@ -77,7 +81,13 @@ export default async function ProjectsPage({
         }
       />
       <div className="app-content">
-        <ProjectFilters filters={filters} currentStatus={searchParams.status ?? "ALL"} currentQ={searchParams.q ?? ""} />
+        <ProjectFilters
+          filters={filters}
+          currentStatus={searchParams.status ?? "ALL"}
+          currentQ={searchParams.q ?? ""}
+          currentSort={searchParams.sort}
+          currentDir={searchParams.dir}
+        />
 
         <div className="card">
           <div className="card-header">
@@ -91,12 +101,12 @@ export default async function ProjectsPage({
               <thead>
                 <tr>
                   <th style={{ width: 40 }}>No.</th>
-                  <th>Site Name</th>
-                  <th>URL</th>
-                  <th style={{ minWidth: 160 }}>Description</th>
-                  <th>Category</th>
-                  <th>Management</th>
-                  <th>Status</th>
+                  <ProjectSortableTh column="name" current={sortState} />
+                  <ProjectSortableTh column="url" current={sortState} />
+                  <ProjectSortableTh column="description" current={sortState} style={{ minWidth: 160 }} />
+                  <ProjectSortableTh column="category" current={sortState} />
+                  <ProjectSortableTh column="management" current={sortState} />
+                  <ProjectSortableTh column="status" current={sortState} />
                   <th style={{ width: 120 }}>Action</th>
                 </tr>
               </thead>
