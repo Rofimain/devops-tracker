@@ -126,6 +126,7 @@ export async function ensureProjectSchema(): Promise<void> {
     await ensureDocSchema();
     await ensureProjectExternalUrls();
     await ensureProjectInfraCostColumns();
+    await ensureStorageServerTable();
   } catch (e) {
     console.error("[ensureProjectSchema] gagal menyelaraskan DB:", e);
   }
@@ -550,4 +551,37 @@ async function ensureProjectInfraCostColumns(): Promise<void> {
   await prisma.$executeRawUnsafe(`ALTER TABLE "ProjectInfra" ADD COLUMN IF NOT EXISTS "costItems" JSONB;`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "ProjectInfra" ADD COLUMN IF NOT EXISTS "costNotes" TEXT;`);
   await prisma.$executeRawUnsafe(`ALTER TABLE "ProjectInfra" ADD COLUMN IF NOT EXISTS "url" TEXT;`);
+}
+
+async function ensureStorageServerTable(): Promise<void> {
+  await prisma.$executeRawUnsafe(`
+DO $$ BEGIN
+  CREATE TYPE "StorageServerType" AS ENUM ('SYNOLOGY', 'HTTP_JSON');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+`);
+
+  await prisma.$executeRawUnsafe(`
+CREATE TABLE IF NOT EXISTS "StorageServer" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "serverType" "StorageServerType" NOT NULL DEFAULT 'SYNOLOGY',
+    "host" TEXT NOT NULL,
+    "port" INTEGER NOT NULL DEFAULT 5001,
+    "useHttps" BOOLEAN NOT NULL DEFAULT true,
+    "username" TEXT NOT NULL DEFAULT '',
+    "password" TEXT NOT NULL DEFAULT '',
+    "baseUrl" TEXT NOT NULL DEFAULT '',
+    "apiUrl" TEXT NOT NULL DEFAULT '',
+    "enabled" BOOLEAN NOT NULL DEFAULT true,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "notes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "StorageServer_pkey" PRIMARY KEY ("id")
+);
+`);
+
+  await prisma.$executeRawUnsafe(`ALTER TABLE "StorageServer" ADD COLUMN IF NOT EXISTS "baseUrl" TEXT NOT NULL DEFAULT '';`);
 }

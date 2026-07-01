@@ -243,6 +243,32 @@ model PurgePreset {
   updatedAt DateTime @updatedAt
 }
 
+/// Server storage/NAS yang dimonitor (Synology DSM atau endpoint HTTP JSON).
+model StorageServer {
+  id         String            @id @default(cuid())
+  name       String
+  serverType StorageServerType @default(SYNOLOGY)
+  host       String
+  port       Int               @default(5001)
+  useHttps   Boolean           @default(true)
+  username   String            @default("")
+  password   String            @default("") @db.Text
+  /// Untuk Synology: URL dasar opsional (https://IP-publik:5001 atau DDNS). Kosong = dari host+port.
+  baseUrl    String            @default("")
+  /// Untuk HTTP_JSON: URL lengkap yang mengembalikan JSON usage (lihat dokumentasi di UI).
+  apiUrl     String            @default("")
+  enabled    Boolean           @default(true)
+  sortOrder  Int               @default(0)
+  notes      String?
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+}
+
+enum StorageServerType {
+  SYNOLOGY
+  HTTP_JSON
+}
+
 enum Role {
   SUPER_ADMIN
   ADMIN

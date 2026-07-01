@@ -33,3 +33,9 @@ export function canWriteAppData(role?: Role | string | null) {
 export function isSuperAdminRole(role?: Role | string | null) {
   return roleStr(role) === "SUPER_ADMIN";
 }
+
+/** Storage monitor — Super Admin, Admin, Member (bukan Operator). */
+export function canViewStorage(role?: Role | string | null) {
+  const r = roleStr(role);
+  return r === "SUPER_ADMIN" || r === "ADMIN" || r === "MEMBER";
+}

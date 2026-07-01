@@ -5,10 +5,10 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import type { LucideIcon } from "lucide-react";
-import { LayoutDashboard, List, Wrench, FileText, Users, Settings, LogOut, BookMarked, CloudOff, ScrollText, RefreshCw, ClipboardCheck } from "lucide-react";
+import { LayoutDashboard, List, Wrench, FileText, Users, Settings, LogOut, BookMarked, CloudOff, ScrollText, RefreshCw, ClipboardCheck, HardDrive } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "@/components/brand-logo";
-import { canPurgeCloudflare, isAdminRole, isSuperAdminRole } from "@/lib/roles";
+import { canPurgeCloudflare, canViewStorage, isAdminRole, isSuperAdminRole } from "@/lib/roles";
 
 type NavItem =
   | { kind: "section"; label: string; visible: (role: string | undefined) => boolean }
@@ -30,6 +30,7 @@ const navItems: NavItem[] = [
   { kind: "section", label: "Resources", visible: (r) => r !== "OPERATOR" },
   { kind: "link", label: "Tools Catalog", href: "/tools", icon: Wrench, visible: (r) => r !== "OPERATOR" },
   { kind: "link", label: "Documentation", href: "/docs", icon: FileText, visible: (r) => r !== "OPERATOR" },
+  { kind: "link", label: "Storage Monitor", href: "/storage", icon: HardDrive, visible: (r) => canViewStorage(r) },
   { kind: "section", label: "CDN", visible: (r) => canPurgeCloudflare(r) },
   { kind: "link", label: "Purge Cloudflare", href: "/purge", icon: CloudOff, visible: (r) => canPurgeCloudflare(r) },
   { kind: "link", label: "CloudFront invalidation", href: "/cloudfront", icon: RefreshCw, visible: (r) => canPurgeCloudflare(r) },
