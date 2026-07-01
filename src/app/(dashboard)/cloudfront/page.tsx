@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { auth, isAdmin } from "@/lib/auth";
-import { fetchCloudFrontDistributionLabel } from "@/lib/cloudfront-distribution-label";
 import { prisma } from "@/lib/prisma";
 import { canPurgeCloudflare, isOperatorRole } from "@/lib/roles";
 import { Topbar } from "@/components/topbar";
@@ -28,14 +27,6 @@ export default async function CloudFrontPage() {
     cfg?.distributionId?.trim() && cfg?.accessKeyId?.trim() && cfg?.secretAccessKey?.trim(),
   );
 
-  let distributionDescription: string | null = null;
-  let distributionDescriptionError: string | null = null;
-  if (configured && cfg?.distributionId && cfg?.accessKeyId && cfg?.secretAccessKey) {
-    const meta = await fetchCloudFrontDistributionLabel(cfg.distributionId, cfg.accessKeyId, cfg.secretAccessKey);
-    distributionDescription = meta.label;
-    distributionDescriptionError = meta.fetchError;
-  }
-
   const initialSettings = admin
     ? {
         distributionId: cfg?.distributionId ?? "",
@@ -61,8 +52,6 @@ export default async function CloudFrontPage() {
           configured={configured}
           canConfigure={admin}
           isOperator={operator}
-          distributionDescription={distributionDescription}
-          distributionDescriptionError={distributionDescriptionError}
           initialSettings={initialSettings}
           configSummary={configSummary}
         />

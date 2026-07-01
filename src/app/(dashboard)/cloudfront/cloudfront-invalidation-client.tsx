@@ -39,16 +39,12 @@ export function CloudFrontInvalidationClient({
   configured,
   canConfigure,
   isOperator,
-  distributionDescription,
-  distributionDescriptionError,
   initialSettings,
   configSummary,
 }: {
   configured: boolean;
   canConfigure: boolean;
   isOperator: boolean;
-  distributionDescription: string | null;
-  distributionDescriptionError: string | null;
   initialSettings: InitialSettings | null;
   configSummary: ConfigSummary;
 }) {
@@ -57,6 +53,9 @@ export function CloudFrontInvalidationClient({
   const [sending, setSending] = useState(false);
   const [err, setErr] = useState("");
   const [responseText, setResponseText] = useState("");
+  const [distributionDescription, setDistributionDescription] = useState<string | null>(null);
+  const [distributionDescriptionError, setDistributionDescriptionError] = useState<string | null>(null);
+  const [loadingDescription, setLoadingDescription] = useState(configured);
 
   const [invPoll, setInvPoll] = useState<InvalidationPoll | null>(null);
   const [pollErr, setPollErr] = useState("");
@@ -71,6 +70,35 @@ export function CloudFrontInvalidationClient({
   const [saving, setSaving] = useState(false);
   const [cfgErr, setCfgErr] = useState("");
   const [cfgOk, setCfgOk] = useState("");
+
+  useEffect(() => {
+    if (!configured) {
+      setLoadingDescription(false);
+      return;
+    }
+    let cancelled = false;
+    setLoadingDescription(true);
+    fetch("/api/cloudfront/distribution-label")
+      .then(async (res) => {
+        const data = (await res.json()) as { label?: string | null; fetchError?: string | null; error?: string };
+        if (cancelled) return;
+        if (!res.ok) {
+          setDistributionDescriptionError(data.error ?? "Gagal memuat deskripsi");
+          return;
+        }
+        setDistributionDescription(data.label ?? null);
+        setDistributionDescriptionError(data.fetchError ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setDistributionDescriptionError("Gagal memuat deskripsi dari AWS");
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingDescription(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [configured]);
 
   useEffect(() => {
     if (!initialSettings) return;
@@ -255,7 +283,9 @@ export function CloudFrontInvalidationClient({
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "var(--text-secondary)" }}>
               <li>
                 Deskripsi (dari AWS):{" "}
-                {distributionDescription?.trim() ? (
+                {loadingDescription ? (
+                  <span style={{ color: "var(--text-muted)" }}>memuat…</span>
+                ) : distributionDescription?.trim() ? (
                   <span style={{ color: "var(--text-primary)" }}>{distributionDescription.trim()}</span>
                 ) : (
                   <span style={{ color: "var(--text-muted)" }}>—</span>
