@@ -66,8 +66,33 @@ function dsmAuthErrorMessage(code: number | undefined): string {
   }
 }
 
+/** Kode error umum semua Web API Synology (File Station API Guide). */
+function dsmApiErrorMessage(code: number | undefined, context = "API"): string {
+  switch (code) {
+    case 101:
+      return `${context}: parameter API/method/version tidak lengkap`;
+    case 102:
+      return `${context}: API tidak ditemukan di NAS ini`;
+    case 103:
+      return `${context}: method tidak ditemukan`;
+    case 104:
+      return `${context}: versi API tidak didukung`;
+    case 105:
+      return "Sesi tidak punya izin storage (kode 105) — gunakan akun administrator; lewat IP publik DSM 7+ sering lebih ketat daripada login browser";
+    case 106:
+      return "Sesi DSM expired (kode 106) — coba refresh";
+    case 107:
+      return "Sesi diganti login lain (kode 107)";
+    case 119:
+      return "SID tidak valid (kode 119)";
+    default:
+      return code != null ? `DSM ${context} error ${code}` : `DSM ${context} gagal`;
+  }
+}
+
 const AUTH_PATHS = ["/webapi/auth.cgi", "/webapi/entry.cgi"] as const;
-const AUTH_SESSIONS = ["FileStation", "Core", "StorageMonitor"] as const;
+/** Core/DSM session diperlukan untuk API storage; FileStation saja sering kena error 105. */
+const AUTH_SESSIONS = ["Core", "DSM", "StorageMonitor", "FileStation"] as const;
 
 async function login(client: AxiosInstance, username: string, password: string): Promise<string> {
   let lastCode: number | undefined;
@@ -161,34 +186,43 @@ function mapCgiVolumes(data: Record<string, unknown>): StorageVolumeInfo[] {
 }
 
 async function fetchVolumes(client: AxiosInstance, sid: string): Promise<StorageVolumeInfo[]> {
-  const core = await dsmGet<Record<string, unknown>>(client, "/webapi/entry.cgi", {
-    api: "SYNO.Core.Storage.Volume",
-    version: 1,
-    method: "list",
-    limit: -1,
-    offset: 0,
-    location: "internal",
-  }, sid);
+  let lastCode: number | undefined;
 
-  if (core.success && core.data) {
-    const mapped = mapCoreVolumes(core.data);
-    if (mapped.length > 0) return mapped;
+  const attempts: Array<Record<string, string | number | undefined>> = [
+    {
+      api: "SYNO.Core.Storage.Volume",
+      version: 1,
+      method: "list",
+      limit: -1,
+      offset: 0,
+      location: "internal",
+    },
+    {
+      api: "SYNO.Storage.CGI.Storage",
+      version: 1,
+      method: "load_info",
+    },
+    {
+      api: "SYNO.Core.System",
+      version: 1,
+      method: "info",
+      type: "storage",
+    },
+  ];
+
+  for (const params of attempts) {
+    const res = await dsmGet<Record<string, unknown>>(client, "/webapi/entry.cgi", params, sid);
+    if (res.error?.code != null) lastCode = res.error.code;
+    if (!res.success || !res.data) continue;
+
+    const fromCore = params.api === "SYNO.Core.Storage.Volume" ? mapCoreVolumes(res.data) : [];
+    if (fromCore.length > 0) return fromCore;
+
+    const fromCgi = mapCgiVolumes(res.data);
+    if (fromCgi.length > 0) return fromCgi;
   }
 
-  const cgi = await dsmGet<Record<string, unknown>>(client, "/webapi/entry.cgi", {
-    api: "SYNO.Storage.CGI.Storage",
-    version: 1,
-    method: "load_info",
-  }, sid);
-
-  if (!cgi.success || !cgi.data) {
-    const code = cgi.error?.code;
-    throw new Error(code ? `DSM API error ${code}` : "Gagal membaca info storage dari DSM");
-  }
-
-  const mapped = mapCgiVolumes(cgi.data);
-  if (mapped.length === 0) throw new Error("Tidak ada volume storage yang terdeteksi");
-  return mapped;
+  throw new Error(dsmApiErrorMessage(lastCode, "storage"));
 }
 
 async function fetchSystemInfo(client: AxiosInstance, sid: string): Promise<StorageUsageResult["system"]> {
