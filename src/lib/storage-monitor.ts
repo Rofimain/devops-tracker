@@ -9,25 +9,25 @@ const REQUEST_TIMEOUT_MS = 15_000;
 function parseHttpJsonVolumes(payload: HttpJsonStoragePayload): StorageVolumeInfo[] {
   if (!Array.isArray(payload.volumes)) return [];
 
-  return payload.volumes
-    .map((v) => {
-      const total = Number(v.totalBytes ?? 0);
-      let used = Number(v.usedBytes ?? 0);
-      if (used <= 0 && total > 0 && v.freeBytes != null) {
-        used = Math.max(0, total - Number(v.freeBytes));
-      }
-      const name = (v.name ?? v.path ?? "Volume").trim();
-      if (!name || total <= 0) return null;
-      return {
+  return payload.volumes.flatMap((v) => {
+    const total = Number(v.totalBytes ?? 0);
+    let used = Number(v.usedBytes ?? 0);
+    if (used <= 0 && total > 0 && v.freeBytes != null) {
+      used = Math.max(0, total - Number(v.freeBytes));
+    }
+    const name = (v.name ?? v.path ?? "Volume").trim();
+    if (!name || total <= 0) return [];
+    return [
+      {
         name,
         path: v.path,
         status: v.status,
         totalBytes: total,
         usedBytes: used,
         fsType: v.fsType,
-      } satisfies StorageVolumeInfo;
-    })
-    .filter((x): x is StorageVolumeInfo => x !== null);
+      },
+    ];
+  });
 }
 
 async function fetchHttpJsonStorageUsage(server: StorageServer): Promise<StorageUsageResult> {

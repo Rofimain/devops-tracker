@@ -88,25 +88,25 @@ function mapCoreVolumes(data: Record<string, unknown>): StorageVolumeInfo[] {
   const raw = data.volumes;
   if (!Array.isArray(raw)) return [];
 
-  return raw
-    .map((item) => {
-      if (!item || typeof item !== "object") return null;
-      const v = item as Record<string, unknown>;
-      const total = parseByteField(v.size_total_byte);
-      const free = parseByteField(v.size_free_byte);
-      const used = total > 0 ? Math.max(0, total - free) : 0;
-      const name = String(v.display_name ?? v.volume_path ?? `Volume ${v.volume_id ?? ""}`).trim();
-      if (!name || total <= 0) return null;
-      return {
+  return raw.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const v = item as Record<string, unknown>;
+    const total = parseByteField(v.size_total_byte);
+    const free = parseByteField(v.size_free_byte);
+    const used = total > 0 ? Math.max(0, total - free) : 0;
+    const name = String(v.display_name ?? v.volume_path ?? `Volume ${v.volume_id ?? ""}`).trim();
+    if (!name || total <= 0) return [];
+    return [
+      {
         name,
         path: typeof v.volume_path === "string" ? v.volume_path : undefined,
         status: typeof v.status === "string" ? v.status : undefined,
         totalBytes: total,
         usedBytes: used,
         fsType: typeof v.fs_type === "string" ? v.fs_type : undefined,
-      } satisfies StorageVolumeInfo;
-    })
-    .filter((x): x is StorageVolumeInfo => x !== null);
+      },
+    ];
+  });
 }
 
 function mapCgiVolumes(data: Record<string, unknown>): StorageVolumeInfo[] {
