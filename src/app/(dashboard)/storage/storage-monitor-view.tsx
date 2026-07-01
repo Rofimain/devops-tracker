@@ -590,7 +590,8 @@ export function StorageMonitorView({ canManage }: { canManage: boolean }) {
                   </div>
                   <div className="alert-warning" style={{ fontSize: 11, marginBottom: 8 }}>
                     {nasTypeLabel(form.serverType)} mendukung <strong>HTTP</strong> dan <strong>HTTPS</strong>. Untuk IP publik,
-                    forward port di router ({form.serverType === "QNAP" ? "8080/443" : "5000/5001"}). Gunakan akun read-only tanpa 2FA.
+                    forward port di router ({form.serverType === "QNAP" ? "8080/443" : "5000/5001"}).
+                    Untuk Synology: akun perlu izin API (sering admin); 2FA browser tidak selalu sama dengan login API.
                   </div>
                   <div className="alert-info" style={{ fontSize: 11, marginBottom: 0 }}>
                     Koneksi diuji dari <strong>server web</strong> ke NAS — tidak perlu satu VLAN.

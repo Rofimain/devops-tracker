@@ -50,24 +50,47 @@ async function dsmGet<T = Record<string, unknown>>(
   return res.data as DsmResponse<T>;
 }
 
-async function login(client: AxiosInstance, username: string, password: string): Promise<string> {
-  let lastErr = "Login gagal";
-  for (const version of AUTH_VERSIONS) {
-    const res = await dsmGet<{ sid?: string }>(client, "/webapi/auth.cgi", {
-      api: "SYNO.API.Auth",
-      version,
-      method: "login",
-      account: username,
-      passwd: password,
-      session: "StorageMonitor",
-      format: "sid",
-    });
-    if (res.success && res.data?.sid) return res.data.sid;
-    if (res.error?.code === 400) lastErr = "Akun atau password salah";
-    else if (res.error?.code === 403) lastErr = "Akun tidak punya izin DSM API";
-    else if (res.error?.code === 402) lastErr = "DSM membutuhkan OTP/2FA — gunakan akun khusus tanpa 2FA";
+/** Kode error resmi SYNO.API.Auth (DSM Login Web API Guide). */
+function dsmAuthErrorMessage(code: number | undefined): string {
+  switch (code) {
+    case 400:
+      return "Akun tidak ditemukan atau password salah";
+    case 402:
+      return "Login ditolak (izin tidak cukup) — coba akun administrator, atau periksa Control Panel → User & Group / Security";
+    case 403:
+      return "Akun membutuhkan kode 2FA/OTP untuk login API (beda dari login browser biasa)";
+    case 404:
+      return "Kode OTP/2FA salah";
+    default:
+      return code != null ? `Login DSM gagal (kode error ${code})` : "Login DSM gagal";
   }
-  throw new Error(lastErr);
+}
+
+const AUTH_PATHS = ["/webapi/auth.cgi", "/webapi/entry.cgi"] as const;
+const AUTH_SESSIONS = ["FileStation", "Core", "StorageMonitor"] as const;
+
+async function login(client: AxiosInstance, username: string, password: string): Promise<string> {
+  let lastCode: number | undefined;
+
+  for (const path of AUTH_PATHS) {
+    for (const session of AUTH_SESSIONS) {
+      for (const version of AUTH_VERSIONS) {
+        const res = await dsmGet<{ sid?: string }>(client, path, {
+          api: "SYNO.API.Auth",
+          version,
+          method: "login",
+          account: username,
+          passwd: password,
+          session,
+          format: "sid",
+        });
+        if (res.success && res.data?.sid) return res.data.sid;
+        if (res.error?.code != null) lastCode = res.error.code;
+      }
+    }
+  }
+
+  throw new Error(dsmAuthErrorMessage(lastCode));
 }
 
 async function logout(client: AxiosInstance, sid: string): Promise<void> {
