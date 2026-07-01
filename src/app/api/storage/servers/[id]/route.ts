@@ -4,7 +4,7 @@ import { StorageServerType } from "@prisma/client";
 import { auth, isAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordActivity } from "@/lib/activity-log";
-import { canViewStorage } from "@/lib/roles";
+import { canViewStorage, canViewStorageEndpoints } from "@/lib/roles";
 import { serializeStorageServer } from "@/lib/storage-monitor";
 import { normalizeStorageServerInput } from "@/lib/storage-server-input";
 
@@ -30,7 +30,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   const server = await prisma.storageServer.findUnique({ where: { id: params.id } });
   if (!server) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(serializeStorageServer(server));
+  const redact = !canViewStorageEndpoints(session.user.role);
+  return NextResponse.json(serializeStorageServer(server, { redactEndpoint: redact }));
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {

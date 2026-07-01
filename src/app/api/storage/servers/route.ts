@@ -4,7 +4,7 @@ import { StorageServerType } from "@prisma/client";
 import { auth, isAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordActivity } from "@/lib/activity-log";
-import { canViewStorage } from "@/lib/roles";
+import { canViewStorage, canViewStorageEndpoints } from "@/lib/roles";
 import { serializeStorageServer, fetchStorageUsage } from "@/lib/storage-monitor";
 import { normalizeStorageServerInput } from "@/lib/storage-server-input";
 
@@ -31,7 +31,8 @@ export async function GET() {
   const servers = await prisma.storageServer.findMany({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
-  return NextResponse.json(servers.map(serializeStorageServer));
+  const redact = !canViewStorageEndpoints(session.user.role);
+  return NextResponse.json(servers.map((s) => serializeStorageServer(s, { redactEndpoint: redact })));
 }
 
 export async function POST(req: NextRequest) {

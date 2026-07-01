@@ -275,5 +275,6 @@ enum Role {
   ADMIN
   OPERATOR
   MEMBER
+  STORAGE_MONITOR
 }
 

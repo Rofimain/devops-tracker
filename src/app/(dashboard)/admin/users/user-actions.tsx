@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
 
-const ROLES = ["MEMBER", "ADMIN", "OPERATOR"] as const;
+const ROLES = ["MEMBER", "ADMIN", "OPERATOR", "STORAGE_MONITOR"] as const;
 
 export function UserActions({
   userId,

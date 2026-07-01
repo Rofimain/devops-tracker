@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 
-/** Enum Postgres `Role` sering tertinggal saat menambah OPERATOR di Prisma — selaraskan. */
-async function ensurePostgresRoleEnumOperator(): Promise<void> {
+/** Enum Postgres `Role` sering tertinggal saat menambah nilai baru di Prisma — selaraskan. */
+async function ensurePostgresRoleEnumValue(enumLabel: string): Promise<void> {
   const typeRows = await prisma.$queryRaw<[{ exists: boolean }]>`
     SELECT EXISTS (
       SELECT 1 FROM pg_type t
@@ -11,17 +11,25 @@ async function ensurePostgresRoleEnumOperator(): Promise<void> {
   `;
   if (!Boolean(typeRows[0]?.exists)) return;
 
-  const hasOp = await prisma.$queryRaw<[{ exists: boolean }]>`
+  const hasValue = await prisma.$queryRaw<[{ exists: boolean }]>`
     SELECT EXISTS (
       SELECT 1 FROM pg_enum e
       JOIN pg_type t ON e.enumtypid = t.oid
       JOIN pg_namespace n ON n.oid = t.typnamespace
-      WHERE n.nspname = 'public' AND t.typname = 'Role' AND e.enumlabel = 'OPERATOR'
+      WHERE n.nspname = 'public' AND t.typname = 'Role' AND e.enumlabel = ${enumLabel}
     ) AS "exists"
   `;
-  if (Boolean(hasOp[0]?.exists)) return;
+  if (Boolean(hasValue[0]?.exists)) return;
 
-  await prisma.$executeRawUnsafe(`ALTER TYPE "Role" ADD VALUE 'OPERATOR'`);
+  await prisma.$executeRawUnsafe(`ALTER TYPE "Role" ADD VALUE '${enumLabel.replace(/'/g, "''")}'`);
+}
+
+async function ensurePostgresRoleEnumOperator(): Promise<void> {
+  await ensurePostgresRoleEnumValue("OPERATOR");
+}
+
+async function ensurePostgresRoleEnumStorageMonitor(): Promise<void> {
+  await ensurePostgresRoleEnumValue("STORAGE_MONITOR");
 }
 
 /** Persetujuan akses: user lama disetujui, user baru default false (sesuai Prisma). */
@@ -51,6 +59,7 @@ export async function ensureProjectSchema(): Promise<void> {
 
   try {
     await ensurePostgresRoleEnumOperator();
+    await ensurePostgresRoleEnumStorageMonitor();
     await ensureUserAccountApprovedColumn();
 
     const webBasedRows = await prisma.$queryRaw<[{ exists: boolean }]>`

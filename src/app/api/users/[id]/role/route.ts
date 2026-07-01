@@ -4,7 +4,7 @@ import { auth, isSuperAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordActivity } from "@/lib/activity-log";
 
-const ASSIGNABLE: Role[] = [Role.MEMBER, Role.ADMIN, Role.OPERATOR];
+const ASSIGNABLE: Role[] = [Role.MEMBER, Role.ADMIN, Role.OPERATOR, Role.STORAGE_MONITOR];
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await auth();
@@ -12,7 +12,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const body = await req.json().catch(() => ({}));
   const role = body?.role as string | undefined;
   if (!role || !ASSIGNABLE.includes(role as Role)) {
-    return NextResponse.json({ error: "Role tidak valid (MEMBER, ADMIN, atau OPERATOR)" }, { status: 400 });
+    return NextResponse.json({ error: "Role tidak valid (MEMBER, ADMIN, OPERATOR, atau STORAGE_MONITOR)" }, { status: 400 });
   }
 
   const existing = await prisma.user.findUnique({ where: { id: params.id } });
@@ -33,7 +33,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const msg = e instanceof Error ? e.message : "Gagal menyimpan";
     if (msg.includes("invalid input value for enum") || msg.includes("22P02")) {
       return NextResponse.json(
-        { error: "Database enum Role belum punya OPERATOR. Restart app / jalankan migrasi agar skema DB diselaraskan." },
+        { error: "Database enum Role belum punya nilai role ini. Restart app / jalankan migrasi agar skema DB diselaraskan." },
         { status: 503 },
       );
     }

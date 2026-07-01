@@ -86,6 +86,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/purge", request.url));
   }
 
+  if (role === "STORAGE_MONITOR") {
+    if (path.startsWith("/storage")) return NextResponse.next();
+    if (path.startsWith("/api/storage") && (request.method === "GET" || request.method === "HEAD")) {
+      return NextResponse.next();
+    }
+    if (path === "/api/audit/session" && request.method === "POST") {
+      return NextResponse.next();
+    }
+    if (path.startsWith("/api/")) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    return NextResponse.redirect(new URL("/storage", request.url));
+  }
+
   if (role === "MEMBER") {
     if (path.startsWith("/purge") || path.startsWith("/cloudfront")) {
       return NextResponse.redirect(new URL("/", request.url));

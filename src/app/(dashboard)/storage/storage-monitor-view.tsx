@@ -116,11 +116,12 @@ function VolumeBar({ volume }: { volume: StorageUsageResult["volumes"][number] }
   );
 }
 
-function ServerCard({ result }: { result: StorageUsageResult }) {
+function ServerCard({ result, showEndpoint }: { result: StorageUsageResult; showEndpoint: boolean }) {
   const endpoint =
     result.serverType === "HTTP_JSON"
       ? "HTTP JSON"
       : `${result.host}:${result.port}`;
+  const endpointLabel = showEndpoint && endpoint !== "HTTP JSON" ? endpoint : null;
 
   return (
     <div className="card" style={{ height: "100%" }}>
@@ -138,7 +139,7 @@ function ServerCard({ result }: { result: StorageUsageResult }) {
                   ? "QNAP QTS"
                   : "HTTP JSON"}
             </span>
-            <span className="mono">{endpoint}</span>
+            {endpointLabel ? <span className="mono">{endpointLabel}</span> : null}
           </div>
         </div>
         {result.ok ? (
@@ -174,7 +175,7 @@ function ServerCard({ result }: { result: StorageUsageResult }) {
   );
 }
 
-export function StorageMonitorView({ canManage }: { canManage: boolean }) {
+export function StorageMonitorView({ canManage, showEndpoints }: { canManage: boolean; showEndpoints: boolean }) {
   const [usage, setUsage] = useState<StorageUsageResult[]>([]);
   const [servers, setServers] = useState<SerializedStorageServer[]>([]);
   const [loading, setLoading] = useState(true);
@@ -407,7 +408,7 @@ export function StorageMonitorView({ canManage }: { canManage: boolean }) {
       ) : (
         <div className="grid-2" style={{ marginBottom: canManage ? 20 : 0 }}>
           {usage.map((result) => (
-            <ServerCard key={result.serverId} result={result} />
+            <ServerCard key={result.serverId} result={result} showEndpoint={showEndpoints} />
           ))}
         </div>
       )}

@@ -8,7 +8,7 @@ import type { LucideIcon } from "lucide-react";
 import { LayoutDashboard, List, Wrench, FileText, Users, Settings, LogOut, BookMarked, CloudOff, ScrollText, RefreshCw, ClipboardCheck, HardDrive } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "@/components/brand-logo";
-import { canPurgeCloudflare, canViewStorage, isAdminRole, isSuperAdminRole } from "@/lib/roles";
+import { canPurgeCloudflare, canViewStorage, isAdminRole, isLimitedNavRole, isStorageMonitorRole, isSuperAdminRole } from "@/lib/roles";
 
 type NavItem =
   | { kind: "section"; label: string; visible: (role: string | undefined) => boolean }
@@ -22,14 +22,15 @@ type NavItem =
     };
 
 const navItems: NavItem[] = [
-  { kind: "section", label: "Main", visible: (r) => r !== "OPERATOR" },
-  { kind: "link", label: "Dashboard", href: "/", icon: LayoutDashboard, visible: (r) => r !== "OPERATOR" },
-  { kind: "link", label: "Logbook mingguan", href: "/logbook", icon: BookMarked, visible: (r) => r !== "OPERATOR" },
-  { kind: "link", label: "Daily Monitoring", href: "/monitoring", icon: ClipboardCheck, visible: (r) => r !== "OPERATOR" },
-  { kind: "link", label: "Projects", href: "/projects", icon: List, countKey: "projects", visible: (r) => r !== "OPERATOR" },
-  { kind: "section", label: "Resources", visible: (r) => r !== "OPERATOR" },
-  { kind: "link", label: "Tools Catalog", href: "/tools", icon: Wrench, visible: (r) => r !== "OPERATOR" },
-  { kind: "link", label: "Documentation", href: "/docs", icon: FileText, visible: (r) => r !== "OPERATOR" },
+  { kind: "section", label: "Main", visible: (r) => !isLimitedNavRole(r) },
+  { kind: "link", label: "Dashboard", href: "/", icon: LayoutDashboard, visible: (r) => !isLimitedNavRole(r) },
+  { kind: "link", label: "Logbook mingguan", href: "/logbook", icon: BookMarked, visible: (r) => !isLimitedNavRole(r) },
+  { kind: "link", label: "Daily Monitoring", href: "/monitoring", icon: ClipboardCheck, visible: (r) => !isLimitedNavRole(r) },
+  { kind: "link", label: "Projects", href: "/projects", icon: List, countKey: "projects", visible: (r) => !isLimitedNavRole(r) },
+  { kind: "section", label: "Resources", visible: (r) => !isLimitedNavRole(r) },
+  { kind: "link", label: "Tools Catalog", href: "/tools", icon: Wrench, visible: (r) => !isLimitedNavRole(r) },
+  { kind: "link", label: "Documentation", href: "/docs", icon: FileText, visible: (r) => !isLimitedNavRole(r) },
+  { kind: "section", label: "Infrastructure", visible: (r) => isStorageMonitorRole(r) },
   { kind: "link", label: "Storage Monitor", href: "/storage", icon: HardDrive, visible: (r) => canViewStorage(r) },
   { kind: "section", label: "CDN", visible: (r) => canPurgeCloudflare(r) },
   { kind: "link", label: "Purge Cloudflare", href: "/purge", icon: CloudOff, visible: (r) => canPurgeCloudflare(r) },

@@ -61,6 +61,7 @@ export const ROLE_COLORS: Record<string, string> = {
   ADMIN: "badge-purple",
   OPERATOR: "badge-yellow",
   MEMBER: "badge-gray",
+  STORAGE_MONITOR: "badge-blue",
 };
 
 export const TOOL_CATEGORY_COLORS: Record<string, string> = {

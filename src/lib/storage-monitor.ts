@@ -130,18 +130,27 @@ export async function fetchAllStorageUsage(servers: StorageServer[]): Promise<St
   return Promise.all(enabled.map((s) => fetchStorageUsage(s)));
 }
 
-export function serializeStorageServer(server: StorageServer) {
+export function sanitizeStorageUsageResult(
+  result: StorageUsageResult,
+  redactEndpoint: boolean,
+): StorageUsageResult {
+  if (!redactEndpoint) return result;
+  return { ...result, host: "", port: 0 };
+}
+
+export function serializeStorageServer(server: StorageServer, options?: { redactEndpoint?: boolean }) {
+  const redact = options?.redactEndpoint ?? false;
   return {
     id: server.id,
     name: server.name,
     serverType: server.serverType,
-    host: server.host,
-    port: server.port,
+    host: redact ? "" : server.host,
+    port: redact ? 0 : server.port,
     useHttps: server.useHttps,
-    username: server.username,
+    username: redact ? "" : server.username,
     hasPassword: Boolean(server.password.trim()),
-    baseUrl: server.baseUrl,
-    apiUrl: server.apiUrl,
+    baseUrl: redact ? "" : server.baseUrl,
+    apiUrl: redact ? "" : server.apiUrl,
     enabled: server.enabled,
     sortOrder: server.sortOrder,
     notes: server.notes,
