@@ -84,6 +84,9 @@ jobs:
               ${IMAGE}:latest \
               sh -c "npx prisma@5 db push --accept-data-loss"
             # Tarik image service app dari registry + buat ulang container (restart implisit tiap deploy)
+            if ! grep -q 'CRON_SECRET' docker-compose.yml 2>/dev/null; then
+              perl -0pi -e 's/(SUPER_ADMIN_EMAIL: \$\{SUPER_ADMIN_EMAIL\}\n)/$1      CRON_SECRET: \${CRON_SECRET:-}\n/ unless /CRON_SECRET/' docker-compose.yml
+            fi
             if grep -q '^CRON_SECRET=' .env; then
               export CRON_SECRET="$(grep '^CRON_SECRET=' .env | cut -d= -f2- | tr -d '\r' | tr -d '"')"
             fi
