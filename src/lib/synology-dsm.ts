@@ -85,10 +85,47 @@ function dsmApiErrorMessage(code: number | undefined, context = "API"): string {
       return "Sesi diganti login lain (kode 107)";
     case 119:
       return "SID tidak valid (kode 119)";
+    case 1006:
+      return "API storage tidak dikenali / parameter salah di NAS ini (kode 1006) — pastikan Storage Manager normal di DSM dan akun administrator";
     default:
       return code != null ? `DSM ${context} error ${code}` : `DSM ${context} gagal`;
   }
 }
+
+type StorageApiAttempt = {
+  label: string;
+  params: Record<string, string | number | undefined>;
+};
+
+const STORAGE_API_ATTEMPTS: StorageApiAttempt[] = [
+  {
+    label: "SYNO.Core.Storage.Volume",
+    params: {
+      api: "SYNO.Core.Storage.Volume",
+      version: 1,
+      method: "list",
+      limit: -1,
+      offset: 0,
+      location: "internal",
+    },
+  },
+  {
+    label: "SYNO.Storage.CGI.Storage",
+    params: {
+      api: "SYNO.Storage.CGI.Storage",
+      version: 1,
+      method: "load_info",
+    },
+  },
+  {
+    label: "SYNO.Storage.CGI.Volume",
+    params: {
+      api: "SYNO.Storage.CGI.Volume",
+      version: 1,
+      method: "list",
+    },
+  },
+];
 
 const AUTH_PATHS = ["/webapi/auth.cgi", "/webapi/entry.cgi"] as const;
 /** Core/DSM session diperlukan untuk API storage; FileStation saja sering kena error 105. */
@@ -187,42 +224,26 @@ function mapCgiVolumes(data: Record<string, unknown>): StorageVolumeInfo[] {
 
 async function fetchVolumes(client: AxiosInstance, sid: string): Promise<StorageVolumeInfo[]> {
   let lastCode: number | undefined;
+  const errors: string[] = [];
 
-  const attempts: Array<Record<string, string | number | undefined>> = [
-    {
-      api: "SYNO.Core.Storage.Volume",
-      version: 1,
-      method: "list",
-      limit: -1,
-      offset: 0,
-      location: "internal",
-    },
-    {
-      api: "SYNO.Storage.CGI.Storage",
-      version: 1,
-      method: "load_info",
-    },
-    {
-      api: "SYNO.Core.System",
-      version: 1,
-      method: "info",
-      type: "storage",
-    },
-  ];
-
-  for (const params of attempts) {
-    const res = await dsmGet<Record<string, unknown>>(client, "/webapi/entry.cgi", params, sid);
-    if (res.error?.code != null) lastCode = res.error.code;
+  for (const attempt of STORAGE_API_ATTEMPTS) {
+    const res = await dsmGet<Record<string, unknown>>(client, "/webapi/entry.cgi", attempt.params, sid);
+    if (res.error?.code != null) {
+      lastCode = res.error.code;
+      errors.push(`${attempt.label}: ${res.error.code}`);
+    }
     if (!res.success || !res.data) continue;
 
-    const fromCore = params.api === "SYNO.Core.Storage.Volume" ? mapCoreVolumes(res.data) : [];
+    const fromCore =
+      attempt.params.api === "SYNO.Core.Storage.Volume" ? mapCoreVolumes(res.data) : [];
     if (fromCore.length > 0) return fromCore;
 
     const fromCgi = mapCgiVolumes(res.data);
     if (fromCgi.length > 0) return fromCgi;
   }
 
-  throw new Error(dsmApiErrorMessage(lastCode, "storage"));
+  const detail = errors.length > 0 ? ` (${errors.join("; ")})` : "";
+  throw new Error(`${dsmApiErrorMessage(lastCode, "storage")}${detail}`);
 }
 
 async function fetchSystemInfo(client: AxiosInstance, sid: string): Promise<StorageUsageResult["system"]> {
