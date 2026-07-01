@@ -275,7 +275,7 @@ export function StorageMonitorView({ canManage }: { canManage: boolean }) {
     username: form.username.trim(),
     apiUrl: form.apiUrl.trim(),
     enabled: form.enabled,
-    notes: form.notes.trim() || null,
+    ...(form.notes.trim() ? { notes: form.notes.trim() } : {}),
     ...(form.password.trim() ? { password: form.password.trim() } : {}),
   });
 

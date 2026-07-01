@@ -20,7 +20,7 @@ const bodySchema = z.object({
   apiUrl: z.string().max(2000).optional(),
   enabled: z.boolean().optional(),
   sortOrder: z.number().int().optional(),
-  notes: z.string().max(2000).optional(),
+  notes: z.string().max(2000).nullable().optional(),
 });
 
 export async function GET() {
@@ -42,7 +42,11 @@ export async function POST(req: NextRequest) {
   try {
     const json = await req.json();
     const parsed = bodySchema.safeParse(json);
-    if (!parsed.success) return NextResponse.json({ error: "Data tidak valid" }, { status: 400 });
+    if (!parsed.success) {
+      const first = parsed.error.issues[0];
+      const detail = first ? `${first.path.join(".")}: ${first.message}` : "Data tidak valid";
+      return NextResponse.json({ error: detail }, { status: 400 });
+    }
 
     const normalized = normalizeStorageServerInput({
       ...parsed.data,

@@ -44,7 +44,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   try {
     const json = await req.json();
     const parsed = putSchema.safeParse(json);
-    if (!parsed.success) return NextResponse.json({ error: "Data tidak valid" }, { status: 400 });
+    if (!parsed.success) {
+      const first = parsed.error.issues[0];
+      const detail = first ? `${first.path.join(".")}: ${first.message}` : "Data tidak valid";
+      return NextResponse.json({ error: detail }, { status: 400 });
+    }
 
     const data = parsed.data;
     const normalized = normalizeStorageServerInput(
