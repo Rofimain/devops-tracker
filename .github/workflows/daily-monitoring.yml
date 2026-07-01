@@ -19,19 +19,71 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.schedule == '5 5 * * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.slot == '1')
     steps:
-      - name: Trigger cron endpoint
+      - name: Validate secrets
+        id: config
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          curl -sf -X POST \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "${{ secrets.APP_URL }}/api/cron/daily-monitoring?slot=1"
+          set -euo pipefail
+          if [ -n "$APP_URL" ] && [ -n "$CRON_SECRET" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "ready=false" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "::error::GitHub Secrets belum lengkap. Tambahkan APP_URL dan CRON_SECRET di Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          echo "::notice::Cron monitoring dilewati — APP_URL / CRON_SECRET belum di-set di GitHub Secrets."
+
+      - name: Trigger cron endpoint
+        if: steps.config.outputs.ready == 'true'
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          BASE="${APP_URL%/}"
+          URL="${BASE}/api/cron/daily-monitoring?slot=1"
+          echo "POST ${URL}"
+          curl -sfS -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${URL}"
 
   check2:
     name: Daily Check 2 (20:00–21:00 WIB)
     runs-on: ubuntu-latest
     if: github.event.schedule == '5 14 * * *' || (github.event_name == 'workflow_dispatch' && github.event.inputs.slot == '2')
     steps:
-      - name: Trigger cron endpoint
+      - name: Validate secrets
+        id: config
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
-          curl -sf -X POST \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "${{ secrets.APP_URL }}/api/cron/daily-monitoring?slot=2"
+          set -euo pipefail
+          if [ -n "$APP_URL" ] && [ -n "$CRON_SECRET" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "ready=false" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "::error::GitHub Secrets belum lengkap. Tambahkan APP_URL dan CRON_SECRET di Settings → Secrets and variables → Actions."
+            exit 1
+          fi
+          echo "::notice::Cron monitoring dilewati — APP_URL / CRON_SECRET belum di-set di GitHub Secrets."
+
+      - name: Trigger cron endpoint
+        if: steps.config.outputs.ready == 'true'
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          BASE="${APP_URL%/}"
+          URL="${BASE}/api/cron/daily-monitoring?slot=2"
+          echo "POST ${URL}"
+          curl -sfS -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${URL}"
