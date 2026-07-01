@@ -266,6 +266,7 @@ model StorageServer {
 
 enum StorageServerType {
   SYNOLOGY
+  QNAP
   HTTP_JSON
 }
 

@@ -31,6 +31,67 @@ export type NormalizedStorageServerInput = {
   notes: string | null;
 };
 
+function normalizeNasInput(
+  data: StorageServerInput,
+  nasType: "SYNOLOGY" | "QNAP",
+  password: string,
+): { ok: true; value: NormalizedStorageServerInput } | { ok: false; error: string } {
+  const name = data.name.trim();
+  const customBase = (data.baseUrl ?? "").trim();
+  let host = data.host.trim();
+  const defaultHttps = data.useHttps ?? (nasType === "SYNOLOGY");
+  let port = data.port ?? (nasType === "QNAP" ? (defaultHttps ? 443 : 8080) : defaultHttps ? 5001 : 5000);
+  let useHttps = defaultHttps;
+  let baseUrl = "";
+
+  if (customBase) {
+    const fromBase = parseStorageHostInput(customBase, undefined, undefined, nasType);
+    if (!fromBase) {
+      return { ok: false, error: `URL dasar ${nasType === "QNAP" ? "QNAP" : "Synology"} tidak valid` };
+    }
+    host = fromBase.host;
+    port = fromBase.port;
+    useHttps = fromBase.useHttps;
+    baseUrl = customBase.replace(/\/$/, "");
+  } else {
+    const parsed = parseStorageHostInput(host, data.port, data.useHttps, nasType);
+    if (!parsed) {
+      return {
+        ok: false,
+        error: "IP publik, hostname, atau URL tidak valid",
+      };
+    }
+    host = parsed.host;
+    port = parsed.port;
+    useHttps = parsed.useHttps;
+  }
+
+  if (!password) {
+    return {
+      ok: false,
+      error: nasType === "QNAP" ? "Password QTS wajib untuk QNAP" : "Password DSM wajib untuk Synology",
+    };
+  }
+
+  return {
+    ok: true,
+    value: {
+      name,
+      serverType: nasType,
+      host,
+      port,
+      useHttps,
+      username: (data.username ?? "").trim(),
+      password,
+      baseUrl,
+      apiUrl: "",
+      enabled: data.enabled ?? true,
+      sortOrder: data.sortOrder ?? 0,
+      notes: data.notes?.trim() || null,
+    },
+  };
+}
+
 export function normalizeStorageServerInput(
   data: StorageServerInput,
   existingPassword = "",
@@ -41,46 +102,11 @@ export function normalizeStorageServerInput(
   const password = data.password !== undefined ? data.password.trim() : existingPassword;
 
   if (data.serverType === "SYNOLOGY") {
-    const customBase = (data.baseUrl ?? "").trim();
-    let host = data.host.trim();
-    let port = data.port ?? 5001;
-    let useHttps = data.useHttps ?? true;
-    let baseUrl = "";
+    return normalizeNasInput(data, "SYNOLOGY", password);
+  }
 
-    if (customBase) {
-      const fromBase = parseStorageHostInput(customBase);
-      if (!fromBase) return { ok: false, error: "URL dasar Synology tidak valid" };
-      host = fromBase.host;
-      port = fromBase.port;
-      useHttps = fromBase.useHttps;
-      baseUrl = customBase.replace(/\/$/, "");
-    } else {
-      const parsed = parseStorageHostInput(host, data.port, data.useHttps);
-      if (!parsed) return { ok: false, error: "IP publik, hostname, atau URL DSM tidak valid" };
-      host = parsed.host;
-      port = parsed.port;
-      useHttps = parsed.useHttps;
-    }
-
-    if (!password) return { ok: false, error: "Password DSM wajib untuk Synology" };
-
-    return {
-      ok: true,
-      value: {
-        name,
-        serverType: "SYNOLOGY",
-        host,
-        port,
-        useHttps,
-        username: (data.username ?? "").trim(),
-        password,
-        baseUrl,
-        apiUrl: "",
-        enabled: data.enabled ?? true,
-        sortOrder: data.sortOrder ?? 0,
-        notes: data.notes?.trim() || null,
-      },
-    };
+  if (data.serverType === "QNAP") {
+    return normalizeNasInput(data, "QNAP", password);
   }
 
   const apiUrl = (data.apiUrl ?? "").trim();

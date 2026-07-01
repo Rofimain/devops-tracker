@@ -3,6 +3,7 @@ import axios from "axios";
 import type { StorageServer } from "@prisma/client";
 import type { HttpJsonStoragePayload, StorageUsageResult, StorageVolumeInfo } from "@/lib/storage-types";
 import { fetchSynologyStorageUsage } from "@/lib/synology-dsm";
+import { fetchQnapStorageUsage } from "@/lib/qnap-qts";
 
 const REQUEST_TIMEOUT_MS = 15_000;
 
@@ -115,6 +116,10 @@ export async function fetchStorageUsage(server: StorageServer): Promise<StorageU
 
   if (server.serverType === "HTTP_JSON") {
     return fetchHttpJsonStorageUsage(server);
+  }
+
+  if (server.serverType === "QNAP") {
+    return fetchQnapStorageUsage(server);
   }
 
   return fetchSynologyStorageUsage(server);

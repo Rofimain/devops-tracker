@@ -18,9 +18,11 @@ import { parseStorageHostInput } from "@/lib/storage-endpoint";
 import type { StorageUsageResult } from "@/lib/storage-types";
 import type { SerializedStorageServer } from "@/lib/storage-monitor";
 
+type NasServerType = "SYNOLOGY" | "QNAP";
+
 type ServerFormState = {
   name: string;
-  serverType: "SYNOLOGY" | "HTTP_JSON";
+  serverType: NasServerType | "HTTP_JSON";
   host: string;
   port: string;
   useHttps: boolean;
@@ -31,6 +33,24 @@ type ServerFormState = {
   enabled: boolean;
   notes: string;
 };
+
+function isNasType(t: ServerFormState["serverType"]): t is NasServerType {
+  return t === "SYNOLOGY" || t === "QNAP";
+}
+
+function nasDefaults(t: NasServerType): Pick<ServerFormState, "port" | "useHttps"> {
+  if (t === "QNAP") return { port: "8080", useHttps: false };
+  return { port: "5001", useHttps: true };
+}
+
+function nasTypeLabel(t: NasServerType): string {
+  return t === "QNAP" ? "QNAP QTS" : "Synology DSM";
+}
+
+function nasPortHint(t: NasServerType, useHttps: boolean): string {
+  if (t === "QNAP") return useHttps ? "443 (HTTPS default QTS)" : "8080 (HTTP default QTS)";
+  return useHttps ? "5001 (HTTPS default DSM)" : "5000 (HTTP default DSM)";
+}
 
 const emptyForm = (): ServerFormState => ({
   name: "",
@@ -112,7 +132,11 @@ function ServerCard({ result }: { result: StorageUsageResult }) {
           </div>
           <div style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 4 }}>
             <span className="badge badge-gray" style={{ fontSize: 9, marginRight: 6 }}>
-              {result.serverType === "SYNOLOGY" ? "Synology DSM" : "HTTP JSON"}
+              {result.serverType === "SYNOLOGY"
+                ? "Synology DSM"
+                : result.serverType === "QNAP"
+                  ? "QNAP QTS"
+                  : "HTTP JSON"}
             </span>
             <span className="mono">{endpoint}</span>
           </div>
@@ -229,7 +253,8 @@ export function StorageMonitorView({ canManage }: { canManage: boolean }) {
   };
 
   const applyParsedHost = (raw: string) => {
-    const parsed = parseStorageHostInput(raw, Number(form.port) || undefined, form.useHttps);
+    if (!isNasType(form.serverType)) return;
+    const parsed = parseStorageHostInput(raw, Number(form.port) || undefined, form.useHttps, form.serverType);
     if (!parsed) return;
     setForm((f) => ({
       ...f,
@@ -244,7 +269,7 @@ export function StorageMonitorView({ canManage }: { canManage: boolean }) {
     name: form.name.trim(),
     serverType: form.serverType,
     host: form.host.trim(),
-    port: Number(form.port) || (form.serverType === "SYNOLOGY" ? 5001 : 443),
+    port: Number(form.port) || (form.serverType === "QNAP" ? (form.useHttps ? 443 : 8080) : form.serverType === "SYNOLOGY" ? (form.useHttps ? 5001 : 5000) : 443),
     useHttps: form.useHttps,
     baseUrl: form.baseUrl.trim(),
     username: form.username.trim(),
@@ -257,8 +282,8 @@ export function StorageMonitorView({ canManage }: { canManage: boolean }) {
   const testConnection = async () => {
     setFormErr("");
     setTestResult(null);
-    if (form.serverType === "SYNOLOGY" && !form.password.trim() && !editingId) {
-      setFormErr("Isi password DSM untuk uji koneksi");
+    if (isNasType(form.serverType) && !form.password.trim() && !editingId) {
+      setFormErr(`Isi password ${form.serverType === "QNAP" ? "QTS" : "DSM"} untuk uji koneksi`);
       return;
     }
     setTesting(true);
@@ -410,7 +435,7 @@ export function StorageMonitorView({ canManage }: { canManage: boolean }) {
                     <td style={{ fontWeight: 600 }}>{s.name}</td>
                     <td>
                       <span className="badge badge-gray" style={{ fontSize: 9 }}>
-                        {s.serverType === "SYNOLOGY" ? "Synology" : "HTTP JSON"}
+                        {s.serverType === "SYNOLOGY" ? "Synology" : s.serverType === "QNAP" ? "QNAP" : "HTTP JSON"}
                       </span>
                     </td>
                     <td className="mono">{s.host}</td>
@@ -474,21 +499,21 @@ export function StorageMonitorView({ canManage }: { canManage: boolean }) {
                   className="form-select"
                   value={form.serverType}
                   onChange={(e) => {
-                    const t = e.target.value as "SYNOLOGY" | "HTTP_JSON";
-                    setForm((f) => ({
-                      ...f,
-                      serverType: t,
-                      port: t === "SYNOLOGY" ? "5001" : "80",
-                      useHttps: t === "SYNOLOGY",
-                    }));
+                    const t = e.target.value as ServerFormState["serverType"];
+                    if (t === "HTTP_JSON") {
+                      setForm((f) => ({ ...f, serverType: t, port: "80", useHttps: false }));
+                    } else {
+                      setForm((f) => ({ ...f, serverType: t, ...nasDefaults(t) }));
+                    }
                   }}
                 >
                   <option value="SYNOLOGY">Synology DSM</option>
+                  <option value="QNAP">QNAP QTS</option>
                   <option value="HTTP_JSON">HTTP JSON (server lain)</option>
                 </select>
               </div>
 
-              {form.serverType === "SYNOLOGY" ? (
+              {isNasType(form.serverType) ? (
                 <>
                   <div className="form-group">
                     <label className="form-label">IP publik, IP lokal, hostname, atau DDNS</label>
@@ -497,21 +522,24 @@ export function StorageMonitorView({ canManage }: { canManage: boolean }) {
                       value={form.host}
                       onChange={(e) => setForm((f) => ({ ...f, host: e.target.value }))}
                       onBlur={(e) => applyParsedHost(e.target.value)}
-                      placeholder="203.0.113.50 atau nas.synology.me"
+                      placeholder={form.serverType === "QNAP" ? "203.0.113.50 atau qnap.example.com" : "203.0.113.50 atau nas.synology.me"}
                     />
                     <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4 }}>
-                      Boleh tempel URL lengkap, mis. <code>https://203.0.113.50:5001</code>
+                      Boleh tempel URL lengkap — HTTP: <code>http://IP:port</code> · HTTPS: <code>https://IP:port</code>
                     </div>
                   </div>
                   <div className="grid-2" style={{ gap: 10 }}>
                     <div className="form-group">
-                      <label className="form-label">Port DSM</label>
+                      <label className="form-label">Port {form.serverType === "QNAP" ? "QTS" : "DSM"}</label>
                       <input
                         className="form-input mono"
                         value={form.port}
                         onChange={(e) => setForm((f) => ({ ...f, port: e.target.value }))}
-                        placeholder="5001"
+                        placeholder={form.useHttps ? (form.serverType === "QNAP" ? "443" : "5001") : form.serverType === "QNAP" ? "8080" : "5000"}
                       />
+                      <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4 }}>
+                        {nasPortHint(form.serverType, form.useHttps)}
+                      </div>
                     </div>
                     <div className="form-group" style={{ display: "flex", alignItems: "flex-end", paddingBottom: 2 }}>
                       <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
@@ -531,14 +559,14 @@ export function StorageMonitorView({ canManage }: { canManage: boolean }) {
                       className="form-input mono"
                       value={form.baseUrl}
                       onChange={(e) => setForm((f) => ({ ...f, baseUrl: e.target.value }))}
-                      placeholder="https://myds.synology.me:5001"
+                      placeholder={form.useHttps ? "https://203.0.113.50:443" : "http://203.0.113.50:8080"}
                     />
                     <div style={{ fontSize: 10, color: "var(--text-muted)", marginTop: 4 }}>
-                      Isi jika pakai reverse proxy atau QuickConnect URL khusus. Kosongkan untuk pakai host + port di atas.
+                      Untuk DDNS, reverse proxy, atau port forward khusus. Kosongkan untuk pakai host + port di atas.
                     </div>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Username DSM</label>
+                    <label className="form-label">Username {form.serverType === "QNAP" ? "QTS" : "DSM"}</label>
                     <input
                       className="form-input"
                       value={form.username}
@@ -549,7 +577,8 @@ export function StorageMonitorView({ canManage }: { canManage: boolean }) {
                   </div>
                   <div className="form-group">
                     <label className="form-label">
-                      Password DSM{editingId ? " (kosongkan jika tidak diubah)" : ""}
+                      Password {form.serverType === "QNAP" ? "QTS" : "DSM"}
+                      {editingId ? " (kosongkan jika tidak diubah)" : ""}
                     </label>
                     <input
                       className="form-input"
@@ -560,10 +589,11 @@ export function StorageMonitorView({ canManage }: { canManage: boolean }) {
                     />
                   </div>
                   <div className="alert-warning" style={{ fontSize: 11, marginBottom: 8 }}>
-                    Port DSM (5000/5001) harus di-forward di router/firewall ke NAS jika pakai IP publik. Gunakan akun read-only tanpa 2FA.
+                    {nasTypeLabel(form.serverType)} mendukung <strong>HTTP</strong> dan <strong>HTTPS</strong>. Untuk IP publik,
+                    forward port di router ({form.serverType === "QNAP" ? "8080/443" : "5000/5001"}). Gunakan akun read-only tanpa 2FA.
                   </div>
                   <div className="alert-info" style={{ fontSize: 11, marginBottom: 0 }}>
-                    Koneksi diuji dari <strong>server web</strong> ke NAS — tidak perlu satu VLAN; cukup server web bisa menjangkau IP/hostname NAS.
+                    Koneksi diuji dari <strong>server web</strong> ke NAS — tidak perlu satu VLAN.
                   </div>
                 </>
               ) : (

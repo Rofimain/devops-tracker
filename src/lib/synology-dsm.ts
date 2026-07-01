@@ -2,7 +2,7 @@ import https from "https";
 import axios, { type AxiosInstance } from "axios";
 import type { StorageServer } from "@prisma/client";
 import type { StorageUsageResult, StorageVolumeInfo } from "@/lib/storage-types";
-import { resolveSynologyBaseUrl } from "@/lib/storage-endpoint";
+import { resolveNasBaseUrl } from "@/lib/storage-endpoint";
 
 const AUTH_VERSIONS = [7, 6, 3] as const;
 const REQUEST_TIMEOUT_MS = 20_000;
@@ -17,7 +17,7 @@ function parseByteField(v: unknown): number {
 }
 
 function createClient(server: Pick<StorageServer, "host" | "port" | "useHttps" | "baseUrl">): AxiosInstance {
-  const baseURL = resolveSynologyBaseUrl(server);
+  const baseURL = resolveNasBaseUrl({ ...server, serverType: "SYNOLOGY" });
   const useTls = baseURL.startsWith("https://");
   const httpsAgent = useTls ? new https.Agent({ rejectUnauthorized: false }) : undefined;
 

@@ -16,8 +16,7 @@ export default async function StoragePage() {
       <Topbar title="Storage Monitor" breadcrumb="Infrastructure" />
       <div className="app-content">
         <div className="alert-info" style={{ marginBottom: 16, fontSize: 12 }}>
-          Pantau penggunaan disk Synology NAS dan server storage lain — via IP publik, IP lokal, atau DDNS.
-          Tidak perlu satu VLAN dengan server web; yang penting server web bisa menjangkau NAS (port DSM di-forward jika perlu).
+          Pantau Synology DSM dan QNAP QTS — via IP publik, lokal, atau DDNS. Keduanya mendukung HTTP dan HTTPS.
           {canManage
             ? " Admin dapat menambah/mengubah konfigurasi server di bawah."
             : " Mode baca saja — hubungi Admin untuk mengubah konfigurasi."}

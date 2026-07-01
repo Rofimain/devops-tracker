@@ -9,7 +9,7 @@ import { normalizeStorageServerInput } from "@/lib/storage-server-input";
 const testSchema = z.object({
   serverId: z.string().optional(),
   name: z.string().max(120).optional(),
-  serverType: z.enum(["SYNOLOGY", "HTTP_JSON"]),
+  serverType: z.enum(["SYNOLOGY", "QNAP", "HTTP_JSON"]),
   host: z.string().max(255).optional(),
   port: z.number().int().min(1).max(65535).optional(),
   useHttps: z.boolean().optional(),

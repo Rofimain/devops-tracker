@@ -6,15 +6,22 @@ export type ParsedStorageEndpoint = {
   baseUrl: string;
 };
 
-function defaultDsmPort(useHttps: boolean): number {
+function defaultNasPort(nasType: "SYNOLOGY" | "QNAP", useHttps: boolean): number {
+  if (nasType === "QNAP") return useHttps ? 443 : 8080;
   return useHttps ? 5001 : 5000;
 }
 
-/** Parse IP publik, IP lokal, hostname, atau URL lengkap (https://nas.example.com:5001). */
+/** @deprecated gunakan defaultNasPort */
+function defaultDsmPort(useHttps: boolean): number {
+  return defaultNasPort("SYNOLOGY", useHttps);
+}
+
+/** Parse IP publik, IP lokal, hostname, atau URL lengkap. */
 export function parseStorageHostInput(
   input: string,
   fallbackPort?: number,
   fallbackHttps?: boolean,
+  nasType: "SYNOLOGY" | "QNAP" = "SYNOLOGY",
 ): ParsedStorageEndpoint | null {
   const raw = input.trim();
   if (!raw) return null;
@@ -23,7 +30,7 @@ export function parseStorageHostInput(
     try {
       const u = new URL(raw);
       const useHttps = u.protocol === "https:";
-      const port = u.port ? Number(u.port) : defaultDsmPort(useHttps);
+      const port = u.port ? Number(u.port) : defaultNasPort(nasType, useHttps);
       if (!u.hostname) return null;
       return {
         host: u.hostname,
@@ -37,7 +44,7 @@ export function parseStorageHostInput(
   }
 
   let host = raw;
-  let port = fallbackPort ?? defaultDsmPort(fallbackHttps ?? true);
+  let port = fallbackPort ?? defaultNasPort(nasType, fallbackHttps ?? true);
   let useHttps = fallbackHttps ?? true;
 
   // host:port tanpa skema (203.0.113.10:5001 atau nas.synology.me:5001)
@@ -56,22 +63,34 @@ export function parseStorageHostInput(
   return { host, port, useHttps, baseUrl };
 }
 
-export function resolveSynologyBaseUrl(server: {
+export function resolveNasBaseUrl(server: {
   host: string;
   port: number;
   useHttps: boolean;
   baseUrl?: string | null;
+  serverType?: "SYNOLOGY" | "QNAP";
 }): string {
   const custom = server.baseUrl?.trim();
   if (custom) return custom.replace(/\/$/, "");
 
-  const parsed = parseStorageHostInput(server.host, server.port, server.useHttps);
+  const nasType = server.serverType ?? "SYNOLOGY";
+  const parsed = parseStorageHostInput(server.host, server.port, server.useHttps, nasType);
   if (parsed) return parsed.baseUrl;
 
   const scheme = server.useHttps ? "https" : "http";
   const h = server.host.trim();
   const hostPart = h.includes(":") && !h.startsWith("[") ? `[${h}]` : h;
   return `${scheme}://${hostPart}:${server.port}`;
+}
+
+/** @deprecated gunakan resolveNasBaseUrl */
+export function resolveSynologyBaseUrl(server: {
+  host: string;
+  port: number;
+  useHttps: boolean;
+  baseUrl?: string | null;
+}): string {
+  return resolveNasBaseUrl({ ...server, serverType: "SYNOLOGY" });
 }
 
 export function hostLabelFromApiUrl(apiUrl: string): string {

@@ -553,10 +553,34 @@ async function ensureProjectInfraCostColumns(): Promise<void> {
   await prisma.$executeRawUnsafe(`ALTER TABLE "ProjectInfra" ADD COLUMN IF NOT EXISTS "url" TEXT;`);
 }
 
+async function ensureStorageServerTypeEnumQnap(): Promise<void> {
+  const typeRows = await prisma.$queryRaw<[{ exists: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_type t
+      JOIN pg_namespace n ON n.oid = t.typnamespace
+      WHERE n.nspname = 'public' AND t.typname = 'StorageServerType'
+    ) AS "exists"
+  `;
+  if (!Boolean(typeRows[0]?.exists)) return;
+
+  const hasQnap = await prisma.$queryRaw<[{ exists: boolean }]>`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_enum e
+      JOIN pg_type t ON e.enumtypid = t.oid
+      JOIN pg_namespace n ON n.oid = t.typnamespace
+      WHERE n.nspname = 'public' AND t.typname = 'StorageServerType' AND e.enumlabel = 'QNAP'
+    ) AS "exists"
+  `;
+  if (Boolean(hasQnap[0]?.exists)) return;
+
+  await prisma.$executeRawUnsafe(`ALTER TYPE "StorageServerType" ADD VALUE 'QNAP'`);
+}
+
 async function ensureStorageServerTable(): Promise<void> {
+  await ensureStorageServerTypeEnumQnap();
   await prisma.$executeRawUnsafe(`
 DO $$ BEGIN
-  CREATE TYPE "StorageServerType" AS ENUM ('SYNOLOGY', 'HTTP_JSON');
+  CREATE TYPE "StorageServerType" AS ENUM ('SYNOLOGY', 'QNAP', 'HTTP_JSON');
 EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
