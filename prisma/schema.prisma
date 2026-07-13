@@ -270,6 +270,47 @@ enum StorageServerType {
   HTTP_JSON
 }
 
+/// Periode pengecekan Report Monitoring (audit compliance).
+enum MonitoringCheckPeriod {
+  MONTHLY
+  QUARTERLY
+  SEMIANNUALLY
+  YEARLY
+}
+
+/// Service/tools yang wajib dicek berkala untuk audit.
+model ReportMonitoringService {
+  id        String                @id @default(cuid())
+  name      String
+  period    MonitoringCheckPeriod
+  sortOrder Int                   @default(0)
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+  checks    ReportMonitoringCheck[]
+}
+
+/// Hasil pengecekan per tahun + bulan (slot ditentukan oleh period service).
+model ReportMonitoringCheck {
+  id         String                  @id @default(cuid())
+  serviceId  String
+  year       Int
+  /// Bulan 1–12 sesuai slot period (mis. quarterly: 1,4,7,10).
+  month      Int
+  checkedAt  DateTime?               @db.Date
+  noteText   String?                 @db.Text
+  imagePath  String?
+  imageName  String?
+  imageMime  String?
+  imageSize  Int?
+  createdAt  DateTime                @default(now())
+  updatedAt  DateTime                @updatedAt
+  service    ReportMonitoringService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, year, month])
+  @@index([year])
+  @@index([serviceId])
+}
+
 enum Role {
   SUPER_ADMIN
   ADMIN

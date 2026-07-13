@@ -698,3 +698,157 @@ a.project-meta-chip:hover {
 .logbook-cat-btn { font-size: 11px; padding: 5px 10px; border-radius: 7px; }
 .logbook-spin { animation: logbook-spin 0.75s linear infinite; }
 @keyframes logbook-spin { to { transform: rotate(360deg); } }
+
+/* ─── REPORT MONITORING (audit) ─────────────────────────────── */
+.rm-page { display: flex; flex-direction: column; gap: 12px; }
+.rm-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.rm-toolbar-left { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.rm-year-nav { display: flex; align-items: center; gap: 6px; }
+.rm-year-label {
+  font-size: 15px;
+  font-weight: 700;
+  min-width: 52px;
+  text-align: center;
+  color: var(--text-primary);
+}
+.rm-meta { font-size: 11px; color: var(--text-muted); }
+.rm-table-card { overflow: hidden; }
+.rm-table-wrap { overflow: auto; max-height: calc(100vh - 180px); }
+.rm-table { min-width: 960px; border-collapse: separate; border-spacing: 0; }
+.rm-table th,
+.rm-table td {
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.rm-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--bg-subtle);
+  text-align: center;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.rm-table thead tr:nth-child(2) th { top: 28px; }
+.rm-sticky {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--bg-surface);
+}
+.rm-table thead .rm-sticky { z-index: 4; background: var(--bg-subtle); }
+.rm-col-no { width: 44px; min-width: 44px; text-align: center !important; left: 0; }
+.rm-col-service { min-width: 200px; left: 44px; text-align: left !important; }
+.rm-col-period { min-width: 110px; text-align: center !important; }
+.rm-col-actions { width: 88px; min-width: 88px; text-align: center !important; }
+.rm-month-head { min-width: 180px; font-weight: 700; }
+.rm-subhead { font-weight: 500; color: var(--text-muted); min-width: 90px; }
+.rm-service-name { font-weight: 600; color: var(--text-primary); }
+.rm-cell-date,
+.rm-cell-note {
+  min-width: 90px;
+  max-width: 160px;
+  font-size: 11px;
+  padding: 8px !important;
+}
+.rm-cell-na {
+  color: var(--text-hint);
+  text-align: center;
+  background: var(--bg-subtle);
+  font-size: 11px;
+}
+.rm-cell-empty { color: var(--text-hint); }
+.rm-cell-clickable { cursor: pointer; }
+.rm-cell-clickable:hover { background: var(--accent-muted); }
+.rm-note-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+}
+.rm-placeholder { color: var(--text-hint); }
+.rm-thumb-link { display: inline-block; }
+.rm-thumb {
+  max-width: 120px;
+  max-height: 72px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  object-fit: cover;
+  background: var(--bg-subtle);
+}
+.rm-row-actions { display: flex; gap: 4px; justify-content: center; }
+.rm-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.rm-modal {
+  width: min(480px, 100%);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.2);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+}
+.rm-modal-wide { width: min(640px, 100%); }
+.rm-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.rm-modal-title { font-size: 14px; font-weight: 700; }
+.rm-modal-body { padding: 14px; }
+.rm-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+.rm-error {
+  background: var(--red-bg);
+  color: var(--red-text);
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+.rm-hint { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+.rm-hint-warn { color: var(--yellow-text); }
+.rm-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+.rm-preview-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.rm-preview-img {
+  max-width: 100%;
+  max-height: 240px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  object-fit: contain;
+  background: var(--bg-subtle);
+}

@@ -136,6 +136,7 @@ export async function ensureProjectSchema(): Promise<void> {
     await ensureProjectExternalUrls();
     await ensureProjectInfraCostColumns();
     await ensureStorageServerTable();
+    await ensureReportMonitoringTables();
   } catch (e) {
     console.error("[ensureProjectSchema] gagal menyelaraskan DB:", e);
   }
@@ -617,4 +618,61 @@ CREATE TABLE IF NOT EXISTS "StorageServer" (
 `);
 
   await prisma.$executeRawUnsafe(`ALTER TABLE "StorageServer" ADD COLUMN IF NOT EXISTS "baseUrl" TEXT NOT NULL DEFAULT '';`);
+}
+
+/** Report Monitoring (audit compliance) — service + check per tahun/bulan. */
+async function ensureReportMonitoringTables(): Promise<void> {
+  await prisma.$executeRawUnsafe(`
+DO $$ BEGIN
+  CREATE TYPE "MonitoringCheckPeriod" AS ENUM ('MONTHLY', 'QUARTERLY', 'SEMIANNUALLY', 'YEARLY');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+`);
+
+  await prisma.$executeRawUnsafe(`
+CREATE TABLE IF NOT EXISTS "ReportMonitoringService" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "period" "MonitoringCheckPeriod" NOT NULL,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "ReportMonitoringService_pkey" PRIMARY KEY ("id")
+);
+`);
+
+  await prisma.$executeRawUnsafe(`
+CREATE TABLE IF NOT EXISTS "ReportMonitoringCheck" (
+    "id" TEXT NOT NULL,
+    "serviceId" TEXT NOT NULL,
+    "year" INTEGER NOT NULL,
+    "month" INTEGER NOT NULL,
+    "checkedAt" DATE,
+    "noteText" TEXT,
+    "imagePath" TEXT,
+    "imageName" TEXT,
+    "imageMime" TEXT,
+    "imageSize" INTEGER,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "ReportMonitoringCheck_pkey" PRIMARY KEY ("id")
+);
+`);
+
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "ReportMonitoringCheck_year_idx" ON "ReportMonitoringCheck"("year");`
+  );
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "ReportMonitoringCheck_serviceId_idx" ON "ReportMonitoringCheck"("serviceId");`
+  );
+  await prisma.$executeRawUnsafe(
+    `CREATE UNIQUE INDEX IF NOT EXISTS "ReportMonitoringCheck_serviceId_year_month_key" ON "ReportMonitoringCheck"("serviceId", "year", "month");`
+  );
+
+  await prisma.$executeRawUnsafe(`ALTER TABLE "ReportMonitoringCheck" DROP CONSTRAINT IF EXISTS "ReportMonitoringCheck_serviceId_fkey";`);
+  await prisma.$executeRawUnsafe(`
+ALTER TABLE "ReportMonitoringCheck" ADD CONSTRAINT "ReportMonitoringCheck_serviceId_fkey"
+  FOREIGN KEY ("serviceId") REFERENCES "ReportMonitoringService"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+`);
 }
