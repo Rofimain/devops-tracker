@@ -380,6 +380,12 @@ export function WebDecommissionForm({
     <form className="wd-form" onSubmit={handleSave}>
       {error && <div className="wd-alert">{error}</div>}
 
+      {readOnly && (
+        <div className="wd-readonly-banner">
+          Mode lihat saja — tombol simpan/hapus disembunyikan karena role akun tidak punya izin tulis.
+        </div>
+      )}
+
       <div className="wd-sheet card">
         <table className="wd-table">
           <tbody>

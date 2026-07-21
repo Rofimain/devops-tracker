@@ -896,6 +896,22 @@ a.project-meta-chip:hover {
   flex-wrap: wrap;
   margin-bottom: 14px;
 }
+.wd-readonly-banner {
+  background: var(--yellow-bg);
+  color: var(--yellow-text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  margin-bottom: 14px;
+  line-height: 1.45;
+}
+.wd-row-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
 .wd-filter-select {
   height: 32px;
   border: 1px solid var(--border);

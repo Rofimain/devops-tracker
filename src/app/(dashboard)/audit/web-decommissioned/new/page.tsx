@@ -1,13 +1,13 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { canWriteAppData } from "@/lib/roles";
+import { canWriteWebDecommissioned } from "@/lib/roles";
 import { Topbar } from "@/components/topbar";
 import { EMPTY_FORM, WebDecommissionForm } from "../web-decommission-form";
 
 export default async function NewWebDecommissionPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
-  if (!canWriteAppData(session.user.role)) redirect("/audit/web-decommissioned");
+  if (!canWriteWebDecommissioned(session.user.role)) redirect("/audit/web-decommissioned");
 
   return (
     <>

@@ -116,7 +116,8 @@ export async function middleware(request: NextRequest) {
       path.startsWith("/api/") &&
       request.method !== "GET" &&
       request.method !== "HEAD" &&
-      !(path === "/api/audit/session" && request.method === "POST")
+      !(path === "/api/audit/session" && request.method === "POST") &&
+      !path.startsWith("/api/web-decommissioned")
     ) {
       return NextResponse.json({ error: "Forbidden: akun hanya baca" }, { status: 403 });
     }

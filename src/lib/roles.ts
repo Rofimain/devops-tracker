@@ -45,6 +45,15 @@ export function canWriteAppData(role?: Role | string | null) {
   return r === "SUPER_ADMIN" || r === "ADMIN";
 }
 
+/**
+ * Dokumentasi Web Decommissioned diisi PIC Infra / tim — Member ikut boleh tulis.
+ * Report Monitoring & data inti lain tetap canWriteAppData (Admin only).
+ */
+export function canWriteWebDecommissioned(role?: Role | string | null) {
+  const r = roleStr(role);
+  return r === "SUPER_ADMIN" || r === "ADMIN" || r === "MEMBER";
+}
+
 export function isSuperAdminRole(role?: Role | string | null) {
   return roleStr(role) === "SUPER_ADMIN";
 }

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { canWriteAppData } from "@/lib/roles";
+import { canWriteWebDecommissioned } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/topbar";
 import { Archive, Plus, Search } from "lucide-react";
@@ -11,6 +11,7 @@ import {
   formatDateDisplay,
   labelForOption,
 } from "@/lib/web-decommissioned";
+import { WebDecommissionRowActions } from "./web-decommission-row-actions";
 
 export default async function WebDecommissionedListPage({
   searchParams,
@@ -19,7 +20,7 @@ export default async function WebDecommissionedListPage({
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
-  const canWrite = canWriteAppData(session.user.role);
+  const canWrite = canWriteWebDecommissioned(session.user.role);
 
   const q = searchParams.q?.trim() ?? "";
   const status = searchParams.status?.trim() ?? "";
@@ -70,6 +71,13 @@ export default async function WebDecommissionedListPage({
           Dokumentasi internal untuk web yang dihapus, inactive, decommissioned, atau diarsipkan —
           termasuk request channel, approval infra, scope, status proses, dan multi bukti screenshot.
         </p>
+
+        {!canWrite && (
+          <div className="wd-readonly-banner">
+            Akun Anda (<strong>{session.user.role?.replace("_", " ") ?? "Unknown"}</strong>) hanya bisa melihat.
+            Edit / hapus membutuhkan role Admin, Super Admin, atau Member.
+          </div>
+        )}
 
         <form className="wd-filters" method="get">
           <div className="search-bar">
@@ -122,6 +130,7 @@ export default async function WebDecommissionedListPage({
                     <th>Selesai</th>
                     <th>Bukti</th>
                     <th>PIC Infra</th>
+                    <th style={{ width: 160 }}>Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -171,6 +180,13 @@ export default async function WebDecommissionedListPage({
                       </td>
                       <td style={{ fontSize: 12 }}>{row.evidences.length}</td>
                       <td style={{ fontSize: 12 }}>{row.picInfra || "—"}</td>
+                      <td>
+                        <WebDecommissionRowActions
+                          id={row.id}
+                          platformName={row.platformName}
+                          canWrite={canWrite}
+                        />
+                      </td>
                     </tr>
                   ))}
                 </tbody>

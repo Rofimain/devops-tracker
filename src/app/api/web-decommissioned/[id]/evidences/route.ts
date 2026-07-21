@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recordActivity } from "@/lib/activity-log";
-import { canWriteAppData } from "@/lib/roles";
+import { canWriteWebDecommissioned } from "@/lib/roles";
 import {
   MAX_IMAGE_BYTES,
   MAX_IMAGES_PER_UPLOAD,
@@ -13,7 +13,7 @@ import {
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (!canWriteAppData(session.user.role)) {
+  if (!canWriteWebDecommissioned(session.user.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

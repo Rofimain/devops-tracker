@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { canWriteAppData } from "@/lib/roles";
+import { canWriteWebDecommissioned } from "@/lib/roles";
 import { prisma } from "@/lib/prisma";
 import { Topbar } from "@/components/topbar";
 import { recordToFormValues, WebDecommissionForm } from "../web-decommission-form";
@@ -19,7 +19,7 @@ export default async function WebDecommissionDetailPage({
   });
   if (!record) notFound();
 
-  const canWrite = canWriteAppData(session.user.role);
+  const canWrite = canWriteWebDecommissioned(session.user.role);
 
   return (
     <>
