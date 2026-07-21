@@ -75,7 +75,7 @@ export default async function WebDecommissionedListPage({
         {!canWrite && (
           <div className="wd-readonly-banner">
             Akun Anda (<strong>{session.user.role?.replace("_", " ") ?? "Unknown"}</strong>) hanya bisa melihat.
-            Edit / hapus membutuhkan role Admin, Super Admin, atau Member.
+            Edit / hapus membutuhkan role Admin atau Super Admin.
           </div>
         )}
 
