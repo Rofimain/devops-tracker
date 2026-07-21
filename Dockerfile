@@ -23,7 +23,7 @@ RUN npm run build
 
 # ─── Stage 3: Runner ──────────────────────────────────────────
 FROM node:20-alpine AS runner
-RUN apk add --no-cache openssl
+RUN apk add --no-cache openssl su-exec
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -42,10 +42,17 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
-USER nextjs
+# Prefill uploads dir (volume mount may override; entrypoint fixes ownership)
+RUN mkdir -p /app/uploads/docs /app/uploads/report-monitoring \
+  && chown -R nextjs:nodejs /app/uploads
 
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Entrypoint starts as root to chown the uploads volume, then drops to nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["node", "server.js"]
