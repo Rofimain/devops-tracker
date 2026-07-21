@@ -852,3 +852,203 @@ a.project-meta-chip:hover {
   object-fit: contain;
   background: var(--bg-subtle);
 }
+
+/* ─── AUDIT INDEX ───────────────────────────────────────────── */
+.audit-index-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.audit-index-card {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.12s, background 0.12s;
+}
+.audit-index-card:hover {
+  border-color: var(--accent);
+  background: var(--accent-muted);
+}
+.audit-index-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--bg-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+.audit-index-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+.audit-index-desc { font-size: 12px; color: var(--text-muted); line-height: 1.45; }
+
+/* ─── WEB DECOMMISSIONED ────────────────────────────────────── */
+.wd-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.wd-filter-select {
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 12px;
+  padding: 0 8px;
+}
+.wd-form { display: flex; flex-direction: column; gap: 12px; }
+.wd-alert {
+  background: var(--red-bg);
+  color: var(--red-text);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+.wd-sheet { overflow: hidden; }
+.wd-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.wd-table th,
+.wd-table td {
+  border-bottom: 1px solid var(--border);
+  padding: 10px 14px;
+  vertical-align: top;
+}
+.wd-table th {
+  width: 34%;
+  min-width: 180px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+}
+.wd-table tr:last-child th,
+.wd-table tr:last-child td { border-bottom: none; }
+.wd-req { color: var(--red-text); margin-left: 3px; }
+.wd-th-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.wd-input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg-raised);
+  color: var(--text-primary);
+  font-size: 12px;
+  padding: 7px 10px;
+  font-family: inherit;
+}
+.wd-input:disabled { opacity: 0.7; cursor: not-allowed; }
+.wd-textarea { resize: vertical; min-height: 72px; }
+.wd-evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.wd-evidence-item {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-subtle);
+}
+.wd-evidence-pending { border-style: dashed; }
+.wd-evidence-thumb-btn {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: zoom-in;
+}
+.wd-evidence-thumb {
+  display: block;
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  background: #0f172a;
+}
+.wd-evidence-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 6px 8px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+.wd-evidence-meta span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wd-evidence-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.wd-empty-evidence {
+  font-size: 11px;
+  color: var(--text-hint);
+  margin-top: 4px;
+}
+.wd-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.wd-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(15, 23, 42, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  cursor: zoom-out;
+}
+.wd-lightbox img {
+  max-width: min(960px, 100%);
+  max-height: calc(100vh - 48px);
+  border-radius: 8px;
+  object-fit: contain;
+  background: #000;
+  cursor: default;
+}
+
+@media (max-width: 720px) {
+  .wd-table,
+  .wd-table tbody,
+  .wd-table tr,
+  .wd-table th,
+  .wd-table td {
+    display: block;
+    width: 100%;
+  }
+  .wd-table th {
+    border-bottom: none;
+    padding-bottom: 4px;
+  }
+  .wd-table td {
+    padding-top: 0;
+    margin-bottom: 4px;
+  }
+}

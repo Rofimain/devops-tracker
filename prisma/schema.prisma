@@ -311,6 +311,92 @@ model ReportMonitoringCheck {
   @@index([serviceId])
 }
 
+/// Dasar penghapusan web (SOP / Audit / Permintaan Bisnis).
+enum WebDecommissionBasis {
+  SOP
+  AUDIT
+  BUSINESS_REQUEST
+}
+
+enum WebDecommissionYesNo {
+  YES
+  NO
+}
+
+enum WebDecommissionThirdParty {
+  YES
+  NO
+  NA
+}
+
+enum WebDecommissionProcessStatus {
+  REQUESTED
+  IN_PROGRESS
+  DELETED
+  INACTIVE
+  DECOMMISSIONED
+  ARCHIVED
+  ON_HOLD
+}
+
+enum WebDecommissionFinalStatus {
+  OPEN
+  CLOSED
+  REJECTED
+}
+
+/// Dokumentasi internal web deleted / inactive / decommissioned / archived.
+model WebDecommissionRecord {
+  id                    String                       @id @default(cuid())
+  requestChannel        String
+  platformName          String
+  domainUrl             String
+  ownerRequester        String
+  systemOwnerTeam       String
+  deletionReason        String?                      @db.Text
+  deletionBasis         WebDecommissionBasis
+  requestDate           DateTime?                    @db.Date
+  infraApproved         WebDecommissionYesNo?
+  infraApprovedAt       DateTime?                    @db.Date
+  infraScope            String?
+  databaseScope         String?
+  thirdPartyIntegration WebDecommissionThirdParty?
+  processStatus         WebDecommissionProcessStatus @default(REQUESTED)
+  picInfra              String?
+  processStartedAt      DateTime?                    @db.Date
+  estimatedDoneAt       DateTime?                    @db.Date
+  completedAt           DateTime?                    @db.Date
+  evidenceLinks         String?                      @db.Text
+  technicalNotes        String?                      @db.Text
+  finalStatus           WebDecommissionFinalStatus   @default(OPEN)
+  auditNotes            String?                      @db.Text
+  createdAt             DateTime                     @default(now())
+  updatedAt             DateTime                     @updatedAt
+  createdById           String?
+  evidences             WebDecommissionEvidence[]
+
+  @@index([processStatus])
+  @@index([finalStatus])
+  @@index([platformName])
+  @@index([createdAt])
+}
+
+/// Bukti penghapusan (multi image) untuk satu record decommission.
+model WebDecommissionEvidence {
+  id        String                @id @default(cuid())
+  recordId  String
+  imagePath String
+  imageName String
+  imageMime String
+  imageSize Int
+  sortOrder Int                   @default(0)
+  caption   String?
+  createdAt DateTime              @default(now())
+  record    WebDecommissionRecord @relation(fields: [recordId], references: [id], onDelete: Cascade)
+
+  @@index([recordId])
+}
+
 enum Role {
   SUPER_ADMIN
   ADMIN

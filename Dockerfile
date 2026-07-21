@@ -43,7 +43,7 @@ COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 # Prefill uploads dir (volume mount may override; entrypoint fixes ownership)
-RUN mkdir -p /app/uploads/docs /app/uploads/report-monitoring \
+RUN mkdir -p /app/uploads/docs /app/uploads/report-monitoring /app/uploads/web-decommissioned \
   && chown -R nextjs:nodejs /app/uploads
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh

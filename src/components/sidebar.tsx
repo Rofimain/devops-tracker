@@ -5,7 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import type { LucideIcon } from "lucide-react";
-import { LayoutDashboard, List, Wrench, FileText, Users, Settings, LogOut, BookMarked, CloudOff, ScrollText, RefreshCw, ClipboardCheck, HardDrive, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, List, Wrench, FileText, Users, Settings, LogOut, BookMarked, CloudOff, ScrollText, RefreshCw, ClipboardCheck, HardDrive, ShieldCheck, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandLogo } from "@/components/brand-logo";
 import { canPurgeCloudflare, canViewStorage, isAdminRole, isLimitedNavRole, isStorageMonitorRole, isSuperAdminRole } from "@/lib/roles";
@@ -26,8 +26,10 @@ const navItems: NavItem[] = [
   { kind: "link", label: "Dashboard", href: "/", icon: LayoutDashboard, visible: (r) => !isLimitedNavRole(r) },
   { kind: "link", label: "Logbook mingguan", href: "/logbook", icon: BookMarked, visible: (r) => !isLimitedNavRole(r) },
   { kind: "link", label: "Daily Monitoring", href: "/monitoring", icon: ClipboardCheck, visible: (r) => !isLimitedNavRole(r) },
-  { kind: "link", label: "Report Monitoring", href: "/report-monitoring", icon: ShieldCheck, visible: (r) => !isLimitedNavRole(r) },
   { kind: "link", label: "Projects", href: "/projects", icon: List, countKey: "projects", visible: (r) => !isLimitedNavRole(r) },
+  { kind: "section", label: "Audit", visible: (r) => !isLimitedNavRole(r) },
+  { kind: "link", label: "Report Monitoring", href: "/audit/report-monitoring", icon: ShieldCheck, visible: (r) => !isLimitedNavRole(r) },
+  { kind: "link", label: "Web Decommissioned", href: "/audit/web-decommissioned", icon: Archive, visible: (r) => !isLimitedNavRole(r) },
   { kind: "section", label: "Resources", visible: (r) => !isLimitedNavRole(r) },
   { kind: "link", label: "Tools Catalog", href: "/tools", icon: Wrench, visible: (r) => !isLimitedNavRole(r) },
   { kind: "link", label: "Documentation", href: "/docs", icon: FileText, visible: (r) => !isLimitedNavRole(r) },

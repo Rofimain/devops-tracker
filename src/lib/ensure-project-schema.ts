@@ -137,6 +137,7 @@ export async function ensureProjectSchema(): Promise<void> {
     await ensureProjectInfraCostColumns();
     await ensureStorageServerTable();
     await ensureReportMonitoringTables();
+    await ensureWebDecommissionTables();
   } catch (e) {
     console.error("[ensureProjectSchema] gagal menyelaraskan DB:", e);
   }
@@ -674,5 +675,117 @@ CREATE TABLE IF NOT EXISTS "ReportMonitoringCheck" (
   await prisma.$executeRawUnsafe(`
 ALTER TABLE "ReportMonitoringCheck" ADD CONSTRAINT "ReportMonitoringCheck_serviceId_fkey"
   FOREIGN KEY ("serviceId") REFERENCES "ReportMonitoringService"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+`);
+}
+
+/** Web Decommissioned — dokumentasi internal + multi bukti screenshot. */
+async function ensureWebDecommissionTables(): Promise<void> {
+  await prisma.$executeRawUnsafe(`
+DO $$ BEGIN
+  CREATE TYPE "WebDecommissionBasis" AS ENUM ('SOP', 'AUDIT', 'BUSINESS_REQUEST');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+`);
+  await prisma.$executeRawUnsafe(`
+DO $$ BEGIN
+  CREATE TYPE "WebDecommissionYesNo" AS ENUM ('YES', 'NO');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+`);
+  await prisma.$executeRawUnsafe(`
+DO $$ BEGIN
+  CREATE TYPE "WebDecommissionThirdParty" AS ENUM ('YES', 'NO', 'NA');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+`);
+  await prisma.$executeRawUnsafe(`
+DO $$ BEGIN
+  CREATE TYPE "WebDecommissionProcessStatus" AS ENUM (
+    'REQUESTED', 'IN_PROGRESS', 'DELETED', 'INACTIVE', 'DECOMMISSIONED', 'ARCHIVED', 'ON_HOLD'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+`);
+  await prisma.$executeRawUnsafe(`
+DO $$ BEGIN
+  CREATE TYPE "WebDecommissionFinalStatus" AS ENUM ('OPEN', 'CLOSED', 'REJECTED');
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+`);
+
+  await prisma.$executeRawUnsafe(`
+CREATE TABLE IF NOT EXISTS "WebDecommissionRecord" (
+    "id" TEXT NOT NULL,
+    "requestChannel" TEXT NOT NULL,
+    "platformName" TEXT NOT NULL,
+    "domainUrl" TEXT NOT NULL,
+    "ownerRequester" TEXT NOT NULL,
+    "systemOwnerTeam" TEXT NOT NULL,
+    "deletionReason" TEXT,
+    "deletionBasis" "WebDecommissionBasis" NOT NULL,
+    "requestDate" DATE,
+    "infraApproved" "WebDecommissionYesNo",
+    "infraApprovedAt" DATE,
+    "infraScope" TEXT,
+    "databaseScope" TEXT,
+    "thirdPartyIntegration" "WebDecommissionThirdParty",
+    "processStatus" "WebDecommissionProcessStatus" NOT NULL DEFAULT 'REQUESTED',
+    "picInfra" TEXT,
+    "processStartedAt" DATE,
+    "estimatedDoneAt" DATE,
+    "completedAt" DATE,
+    "evidenceLinks" TEXT,
+    "technicalNotes" TEXT,
+    "finalStatus" "WebDecommissionFinalStatus" NOT NULL DEFAULT 'OPEN',
+    "auditNotes" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdById" TEXT,
+    CONSTRAINT "WebDecommissionRecord_pkey" PRIMARY KEY ("id")
+);
+`);
+
+  await prisma.$executeRawUnsafe(`
+CREATE TABLE IF NOT EXISTS "WebDecommissionEvidence" (
+    "id" TEXT NOT NULL,
+    "recordId" TEXT NOT NULL,
+    "imagePath" TEXT NOT NULL,
+    "imageName" TEXT NOT NULL,
+    "imageMime" TEXT NOT NULL,
+    "imageSize" INTEGER NOT NULL,
+    "sortOrder" INTEGER NOT NULL DEFAULT 0,
+    "caption" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "WebDecommissionEvidence_pkey" PRIMARY KEY ("id")
+);
+`);
+
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "WebDecommissionRecord_processStatus_idx" ON "WebDecommissionRecord"("processStatus");`
+  );
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "WebDecommissionRecord_finalStatus_idx" ON "WebDecommissionRecord"("finalStatus");`
+  );
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "WebDecommissionRecord_platformName_idx" ON "WebDecommissionRecord"("platformName");`
+  );
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "WebDecommissionRecord_createdAt_idx" ON "WebDecommissionRecord"("createdAt");`
+  );
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "WebDecommissionEvidence_recordId_idx" ON "WebDecommissionEvidence"("recordId");`
+  );
+
+  await prisma.$executeRawUnsafe(
+    `ALTER TABLE "WebDecommissionEvidence" DROP CONSTRAINT IF EXISTS "WebDecommissionEvidence_recordId_fkey";`
+  );
+  await prisma.$executeRawUnsafe(`
+ALTER TABLE "WebDecommissionEvidence" ADD CONSTRAINT "WebDecommissionEvidence_recordId_fkey"
+  FOREIGN KEY ("recordId") REFERENCES "WebDecommissionRecord"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 `);
 }
