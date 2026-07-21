@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect } from "react";
+
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const digest = error.digest;
   const isGenericProd =
@@ -10,7 +12,11 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
     ? error.message
     : digest
         ? `Digest: ${digest} (kirim ke tim dev bila perlu)`
-        : "Detail disembunyikan di production. Cek log server / jalankan ulang migrasi database.";
+        : "Detail disembunyikan di production. Cek log container app.";
+
+  useEffect(() => {
+    console.error("[dashboard error]", error?.digest, error?.message, error);
+  }, [error]);
 
   return (
     <div style={{ padding: 40, textAlign: "center" }}>
@@ -20,9 +26,10 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
         {detail}
       </div>
       <p style={{ fontSize: 11, color: "var(--text-hint)", maxWidth: 420, margin: "0 auto 20px", lineHeight: 1.45 }}>
-        Penyebab umum setelah deploy: tabel/kolom database belum selaras dengan kode (mis.{" "}
-        <code className="mono">Doc.contentType</code>, <code className="mono">LogbookEntry</code>), koneksi DB, atau variabel
-        lingkungan yang hilang. Deploy menjalankan <code className="mono">prisma db push</code>; restart app jika error masih muncul.
+        Ini halaman error generik — teks bantuan di bawah bukan diagnosis otomatis dari error ini. Coba hard refresh / buka
+        lagi halaman yang sama. Jika masih gagal, cek{" "}
+        <code className="mono">docker compose logs app --tail=100</code> di server (cari stack trace /{" "}
+        <code className="mono">P2021</code> / <code className="mono">P2022</code>).
       </p>
       <button type="button" className="btn btn-primary" onClick={reset}>
         Coba Lagi

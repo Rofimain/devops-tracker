@@ -82,7 +82,7 @@ jobs:
               --network devops-tracker_app_net \
               -e DATABASE_URL="postgresql://devops_user:${DB_PASS}@db:5432/devops_tracker" \
               ${IMAGE}:latest \
-              sh -c "npx prisma@5 db push --accept-data-loss"
+              sh -c "npx prisma@5 db push --accept-data-loss --skip-generate"
             # Tarik image service app dari registry + buat ulang container (restart implisit tiap deploy)
             if ! grep -q 'CRON_SECRET' docker-compose.yml 2>/dev/null; then
               perl -0pi -e 's/(SUPER_ADMIN_EMAIL: \$\{SUPER_ADMIN_EMAIL\}\n)/$1      CRON_SECRET: \${CRON_SECRET:-}\n/ unless /CRON_SECRET/' docker-compose.yml
