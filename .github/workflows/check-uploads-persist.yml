@@ -1,0 +1,43 @@
+name: Check Uploads Persist
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check uploads on server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 2222
+          command_timeout: 5m
+          script: |
+            set -e
+            cd /opt/devops-tracker
+            echo "=== 1) Compose mount config ==="
+            grep -n 'uploads\|volumes:' docker-compose.yml | head -40
+            echo ""
+            echo "=== 2) Host folder ./data/uploads ==="
+            mkdir -p data/uploads
+            ls -la data/uploads || true
+            echo "File count host:" $(find data/uploads -type f 2>/dev/null | wc -l)
+            find data/uploads -type f 2>/dev/null | head -30 || true
+            echo ""
+            echo "=== 3) Container mounts (harus bind ke .../data/uploads) ==="
+            docker inspect devops_app --format '{{range .Mounts}}{{.Type}} | {{.Source}} -> {{.Destination}}{{println}}{{end}}' || true
+            echo ""
+            echo "=== 4) Files visible inside container /app/uploads ==="
+            docker exec devops_app sh -c 'ls -la /app/uploads; echo FILE_COUNT=$(find /app/uploads -type f 2>/dev/null | wc -l); find /app/uploads -type f 2>/dev/null | head -30' || true
+            echo ""
+            echo "=== 5) DB image metadata (bukan file fisik) ==="
+            docker exec devops_db psql -U devops_user -d devops_tracker -c "SELECT COUNT(*) AS rm_checks_with_image FROM \"ReportMonitoringCheck\" WHERE \"imagePath\" IS NOT NULL;"
+            docker exec devops_db psql -U devops_user -d devops_tracker -c "SELECT COUNT(*) AS wd_evidences FROM \"WebDecommissionEvidence\";"
+            echo ""
+            echo "=== 6) Deploy safety flags ==="
+            grep -n 'accept-data-loss\|data/uploads\|db push' /home/*/actions-runner/* 2>/dev/null | head -5 || true
+            # show current running image
+            docker inspect devops_app --format 'Image={{.Config.Image}} Created={{.Created}}' || true
