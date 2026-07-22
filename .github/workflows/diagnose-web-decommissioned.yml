@@ -18,14 +18,63 @@ jobs:
           script: |
             set -e
             cd /opt/devops-tracker
-            DB_PASS=$(grep '^DB_PASSWORD' .env | cut -d= -f2 | tr -d '"' | tr -d "'")
             echo "=== Tables ==="
-            docker exec devops_db psql -U devops_user -d devops_tracker -c '\dt "WebDecommission*"' || true
-            echo "=== Sample ids ==="
-            docker exec devops_db psql -U devops_user -d devops_tracker -c 'SELECT id, "platformName" FROM "WebDecommissionRecord" LIMIT 5;' || true
-            ID=$(docker exec devops_db psql -U devops_user -d devops_tracker -tAc 'SELECT id FROM "WebDecommissionRecord" LIMIT 1;' | tr -d '[:space:]')
-            echo "Using ID=$ID"
-            echo "=== Curl detail (no auth, expect 307/401/200) ==="
-            docker exec devops_app wget -S -O- "http://127.0.0.1:3000/audit/web-decommissioned/${ID}" 2>&1 | head -80 || true
-            echo "=== App logs ==="
-            docker compose logs app --tail=80
+            docker exec devops_db psql -U devops_user -d devops_tracker -c "SELECT tablename FROM pg_tables WHERE tablename ILIKE '%decommission%';"
+            echo "=== Full row ==="
+            docker exec devops_db psql -U devops_user -d devops_tracker -c 'SELECT * FROM "WebDecommissionRecord" LIMIT 1;'
+            echo "=== Evidences ==="
+            docker exec devops_db psql -U devops_user -d devops_tracker -c 'SELECT * FROM "WebDecommissionEvidence" LIMIT 5;'
+            echo "=== Prisma findUnique inside app ==="
+            docker exec devops_app node <<'NODE'
+            const { PrismaClient } = require("@prisma/client");
+            const p = new PrismaClient();
+            (async () => {
+              try {
+                const rows = await p.webDecommissionRecord.findMany({ take: 1, include: { evidences: true } });
+                console.log("findMany ok", rows.length);
+                const row = rows[0];
+                if (!row) { console.log("no rows"); return; }
+                console.log("id", row.id);
+                console.log("dates", {
+                  requestDate: row.requestDate,
+                  requestDateType: Object.prototype.toString.call(row.requestDate),
+                  infraApprovedAt: row.infraApprovedAt,
+                  processStartedAt: row.processStartedAt,
+                  estimatedDoneAt: row.estimatedDoneAt,
+                  completedAt: row.completedAt,
+                });
+                console.log("enums", {
+                  deletionBasis: row.deletionBasis,
+                  infraApproved: row.infraApproved,
+                  thirdPartyIntegration: row.thirdPartyIntegration,
+                  processStatus: row.processStatus,
+                  finalStatus: row.finalStatus,
+                });
+                // mimic toDateInputValue
+                function toDateInputValue(date) {
+                  if (!date) return "";
+                  if (typeof date === "string") return date.slice(0, 10);
+                  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+                    console.log("bad date", date, Object.prototype.toString.call(date));
+                    try { return date.toISOString().slice(0, 10); } catch (e) { console.error("toISOString fail", e); return ""; }
+                  }
+                  return date.toISOString().slice(0, 10);
+                }
+                for (const k of ["requestDate","infraApprovedAt","processStartedAt","estimatedDoneAt","completedAt"]) {
+                  console.log(k, "=>", JSON.stringify(toDateInputValue(row[k])));
+                }
+                const full = await p.webDecommissionRecord.findUnique({
+                  where: { id: row.id },
+                  include: { evidences: { orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] } },
+                });
+                console.log("findUnique ok evidences", full?.evidences?.length);
+              } catch (e) {
+                console.error("PRISMA_ERROR", e);
+                process.exitCode = 1;
+              } finally {
+                await p.$disconnect();
+              }
+            })();
+            NODE
+            echo "=== Recent app logs ==="
+            docker compose logs app --tail=100
