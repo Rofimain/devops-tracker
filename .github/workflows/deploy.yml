@@ -83,10 +83,16 @@ jobs:
                      /opt/devops-tracker/data/uploads/report-monitoring \
                      /opt/devops-tracker/data/uploads/web-decommissioned
 
+            # Rescue: salin file dari container yang sedang jalan (kalau upload masih di layer container).
+            if docker ps --format '{{.Names}}' | grep -qx 'devops_app'; then
+              echo "Copying /app/uploads from running container -> ./data/uploads"
+              docker cp devops_app:/app/uploads/. /opt/devops-tracker/data/uploads/ 2>/dev/null || true
+            fi
+
             # One-time migrate dari named volume lama (jika masih ada isinya).
             OLD_VOL=$(docker volume ls -q | grep -E '_doc_uploads$' | head -n1 || true)
-            if [ -n "$OLD_VOL" ] && [ -z "$(ls -A /opt/devops-tracker/data/uploads/report-monitoring 2>/dev/null)" ]; then
-              echo "Migrating uploads from volume: $OLD_VOL"
+            if [ -n "$OLD_VOL" ]; then
+              echo "Merging uploads from volume: $OLD_VOL"
               docker run --rm \
                 -v "${OLD_VOL}:/from:ro" \
                 -v /opt/devops-tracker/data/uploads:/to \
@@ -96,16 +102,39 @@ jobs:
             echo "Upload files on host (before deploy):"
             find /opt/devops-tracker/data/uploads -type f 2>/dev/null | wc -l || true
 
-            # Sync compose dari image build context tidak tersedia; pakai file lokal.
-            # Pastikan bind mount ./data/uploads terpasang (bukan named volume yang mudah orphan).
-            if grep -q 'doc_uploads:/app/uploads' docker-compose.yml 2>/dev/null; then
-              echo "Updating docker-compose.yml uploads mount to ./data/uploads"
-              perl -0pi -e 's/- doc_uploads:\/app\/uploads/- .\/data\/uploads:\/app\/uploads/' docker-compose.yml
-            fi
-            if ! grep -q './data/uploads:/app/uploads' docker-compose.yml; then
-              echo "ERROR: docker-compose.yml harus mount ./data/uploads:/app/uploads" >&2
-              exit 1
-            fi
+            # Pastikan docker-compose.yml app service mount ./data/uploads
+            python3 <<'PY'
+            from pathlib import Path
+            import re
+            p = Path("docker-compose.yml")
+            text = p.read_text()
+            if "./data/uploads:/app/uploads" in text:
+                print("compose already has ./data/uploads bind mount")
+            elif "doc_uploads:/app/uploads" in text:
+                text = text.replace("- doc_uploads:/app/uploads", "- ./data/uploads:/app/uploads")
+                p.write_text(text)
+                print("replaced doc_uploads named volume with ./data/uploads")
+            else:
+                # Sisipkan volumes di service app setelah networks: - app_net
+                pat = re.compile(
+                    r"(  app:\n(?:    .*\n)*?    networks:\n      - app_net\n)",
+                    re.M,
+                )
+                m = pat.search(text)
+                if not m:
+                    raise SystemExit("ERROR: tidak menemukan block service app di docker-compose.yml")
+                insert = m.group(1) + "    volumes:\n      - ./data/uploads:/app/uploads\n"
+                text = text[: m.start()] + insert + text[m.end() :]
+                # bersihkan deklarasi volume doc_uploads jika ada
+                text = re.sub(r"\n  doc_uploads:\n    driver: local\n?", "\n", text)
+                p.write_text(text)
+                print("inserted ./data/uploads bind mount into app service")
+            if "./data/uploads:/app/uploads" not in p.read_text():
+                raise SystemExit("ERROR: gagal memastikan mount ./data/uploads")
+            PY
+
+            echo "=== app volumes snippet ==="
+            grep -n 'uploads\|volumes:' -A2 docker-compose.yml | head -30
 
             DB_PASS=$(grep '^DB_PASSWORD' /opt/devops-tracker/.env | cut -d= -f2 | tr -d '"' | tr -d "'")
             # JANGAN pakai --accept-data-loss: itu boleh drop kolom/tabel & hapus data gambar.
@@ -134,6 +163,8 @@ jobs:
             docker inspect devops_app --format '{{range .Mounts}}{{.Type}} {{.Source}} -> {{.Destination}}{{println}}{{end}}' || true
             echo "Upload files on host (after deploy):"
             find /opt/devops-tracker/data/uploads -type f 2>/dev/null | wc -l || true
+            echo "Upload files inside container:"
+            docker exec devops_app sh -c 'find /app/uploads -type f 2>/dev/null | wc -l' || true
 
             docker image prune -f
             echo "Deploy selesai!"
