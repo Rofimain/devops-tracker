@@ -35,3 +35,4 @@ prisma/migrations/
 
 # uploaded doc files
 uploads/
+data/

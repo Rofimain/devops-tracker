@@ -77,23 +77,63 @@ jobs:
             echo "Image: ${IMAGE}:latest"
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker pull ${IMAGE}:latest
+
+            # Pastikan folder upload di host ada (persist lintas deploy/recreate).
+            mkdir -p /opt/devops-tracker/data/uploads/docs \
+                     /opt/devops-tracker/data/uploads/report-monitoring \
+                     /opt/devops-tracker/data/uploads/web-decommissioned
+
+            # One-time migrate dari named volume lama (jika masih ada isinya).
+            OLD_VOL=$(docker volume ls -q | grep -E '_doc_uploads$' | head -n1 || true)
+            if [ -n "$OLD_VOL" ] && [ -z "$(ls -A /opt/devops-tracker/data/uploads/report-monitoring 2>/dev/null)" ]; then
+              echo "Migrating uploads from volume: $OLD_VOL"
+              docker run --rm \
+                -v "${OLD_VOL}:/from:ro" \
+                -v /opt/devops-tracker/data/uploads:/to \
+                alpine:3.20 sh -c 'cp -a /from/. /to/ 2>/dev/null || true'
+            fi
+
+            echo "Upload files on host (before deploy):"
+            find /opt/devops-tracker/data/uploads -type f 2>/dev/null | wc -l || true
+
+            # Sync compose dari image build context tidak tersedia; pakai file lokal.
+            # Pastikan bind mount ./data/uploads terpasang (bukan named volume yang mudah orphan).
+            if grep -q 'doc_uploads:/app/uploads' docker-compose.yml 2>/dev/null; then
+              echo "Updating docker-compose.yml uploads mount to ./data/uploads"
+              perl -0pi -e 's/- doc_uploads:\/app\/uploads/- .\/data\/uploads:\/app\/uploads/' docker-compose.yml
+            fi
+            if ! grep -q './data/uploads:/app/uploads' docker-compose.yml; then
+              echo "ERROR: docker-compose.yml harus mount ./data/uploads:/app/uploads" >&2
+              exit 1
+            fi
+
             DB_PASS=$(grep '^DB_PASSWORD' /opt/devops-tracker/.env | cut -d= -f2 | tr -d '"' | tr -d "'")
+            # JANGAN pakai --accept-data-loss: itu boleh drop kolom/tabel & hapus data gambar.
             docker run --rm \
               --network devops-tracker_app_net \
               -e DATABASE_URL="postgresql://devops_user:${DB_PASS}@db:5432/devops_tracker" \
+              --entrypoint sh \
               ${IMAGE}:latest \
-              sh -c "npx prisma@5 db push --accept-data-loss --skip-generate"
-            # Tarik image service app dari registry + buat ulang container (restart implisit tiap deploy)
+              -c "npx prisma@5 db push --skip-generate"
+
             if ! grep -q 'CRON_SECRET' docker-compose.yml 2>/dev/null; then
               perl -0pi -e 's/(SUPER_ADMIN_EMAIL: \$\{SUPER_ADMIN_EMAIL\}\n)/$1      CRON_SECRET: \${CRON_SECRET:-}\n/ unless /CRON_SECRET/' docker-compose.yml
             fi
             if grep -q '^CRON_SECRET=' .env; then
               export CRON_SECRET="$(grep '^CRON_SECRET=' .env | cut -d= -f2- | tr -d '\r' | tr -d '"')"
             fi
+
+            # Recreate app saja — JANGAN docker compose down -v / volume prune.
             docker compose pull app
             docker compose stop app || true
             docker rm -f devops_app 2>/dev/null || true
             docker ps -a --filter "name=devops_app" -q | xargs -r docker rm -f
             docker compose up -d --no-deps --force-recreate app
+
+            echo "Mounts on devops_app:"
+            docker inspect devops_app --format '{{range .Mounts}}{{.Type}} {{.Source}} -> {{.Destination}}{{println}}{{end}}' || true
+            echo "Upload files on host (after deploy):"
+            find /opt/devops-tracker/data/uploads -type f 2>/dev/null | wc -l || true
+
             docker image prune -f
             echo "Deploy selesai!"

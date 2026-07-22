@@ -21,7 +21,9 @@ services:
     networks:
       - app_net
     volumes:
-      - doc_uploads:/app/uploads
+      # Bind mount ke host agar file upload tidak hilang saat recreate container / deploy.
+      # Jangan ganti ke named volume tanpa migrasi data.
+      - ./data/uploads:/app/uploads
     # Port hanya expose ke dalam network, nginx yang handle dari luar
 
   db:
@@ -62,8 +64,7 @@ services:
 volumes:
   postgres_data:
     driver: local
-  doc_uploads:
-    driver: local
+  # doc_uploads named volume di-deprecate — data harus di ./data/uploads
 
 networks:
   app_net:

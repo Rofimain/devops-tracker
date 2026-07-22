@@ -21,15 +21,18 @@ jobs:
             cd /opt/devops-tracker
             echo "=== Before ==="
             docker compose ps -a || true
+            mkdir -p /opt/devops-tracker/data/uploads
             docker compose stop app || true
             docker rm -f devops_app 2>/dev/null || true
             docker ps -a --filter "name=devops_app" -q | xargs -r docker rm -f
             if grep -q '^CRON_SECRET=' .env; then
               export CRON_SECRET="$(grep '^CRON_SECRET=' .env | cut -d= -f2- | tr -d '\r' | tr -d '"')"
             fi
+            # Jangan down -v — volume/upload & postgres data harus tetap.
             docker compose up -d db
             docker compose up -d --force-recreate app nginx
             sleep 6
             echo "=== After ==="
             docker compose ps
+            docker inspect devops_app --format '{{range .Mounts}}{{.Type}} {{.Source}} -> {{.Destination}}{{println}}{{end}}' || true
             docker compose logs app --tail=20
