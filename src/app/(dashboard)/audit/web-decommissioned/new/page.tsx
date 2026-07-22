@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { canWriteWebDecommissioned } from "@/lib/roles";
 import { Topbar } from "@/components/topbar";
-import { EMPTY_FORM, WebDecommissionForm } from "../web-decommission-form";
+import { EMPTY_WEB_DECOMMISSION_FORM } from "@/lib/web-decommissioned";
+import { WebDecommissionForm } from "../web-decommission-form";
 
 export default async function NewWebDecommissionPage() {
   const session = await auth();
@@ -13,7 +14,7 @@ export default async function NewWebDecommissionPage() {
     <>
       <Topbar title="Dokumentasi baru" breadcrumb="Audit" breadcrumbHref="/audit" />
       <div className="app-content">
-        <WebDecommissionForm mode="create" initial={EMPTY_FORM} canWrite />
+        <WebDecommissionForm mode="create" initial={EMPTY_WEB_DECOMMISSION_FORM} canWrite />
       </div>
     </>
   );

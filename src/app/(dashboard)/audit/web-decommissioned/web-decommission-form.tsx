@@ -7,122 +7,20 @@ import { ImagePlus, Trash2, X } from "lucide-react";
 import {
   DATABASE_SCOPE_HINT,
   DELETION_BASIS_OPTIONS,
+  EMPTY_WEB_DECOMMISSION_FORM,
   FINAL_STATUS_OPTIONS,
   INFRA_SCOPE_HINT,
   PROCESS_STATUS_OPTIONS,
   THIRD_PARTY_OPTIONS,
   YES_NO_OPTIONS,
-  toDateInputValue,
+  type WebDecommissionEvidenceRow,
+  type WebDecommissionFormValues,
   type WebDecommissionUpsertInput,
 } from "@/lib/web-decommissioned";
 
-export type EvidenceRow = {
-  id: string;
-  imageName: string;
-  imageMime: string;
-  imageSize: number;
-  sortOrder: number;
-};
-
-export type RecordFormValues = {
-  requestChannel: string;
-  platformName: string;
-  domainUrl: string;
-  ownerRequester: string;
-  systemOwnerTeam: string;
-  deletionReason: string;
-  deletionBasis: WebDecommissionUpsertInput["deletionBasis"];
-  requestDate: string;
-  infraApproved: "" | "YES" | "NO";
-  infraApprovedAt: string;
-  infraScope: string;
-  databaseScope: string;
-  thirdPartyIntegration: "" | "YES" | "NO" | "NA";
-  processStatus: WebDecommissionUpsertInput["processStatus"];
-  picInfra: string;
-  processStartedAt: string;
-  estimatedDoneAt: string;
-  completedAt: string;
-  evidenceLinks: string;
-  technicalNotes: string;
-  finalStatus: WebDecommissionUpsertInput["finalStatus"];
-  auditNotes: string;
-};
-
-export const EMPTY_FORM: RecordFormValues = {
-  requestChannel: "",
-  platformName: "",
-  domainUrl: "",
-  ownerRequester: "",
-  systemOwnerTeam: "",
-  deletionReason: "",
-  deletionBasis: "BUSINESS_REQUEST",
-  requestDate: "",
-  infraApproved: "",
-  infraApprovedAt: "",
-  infraScope: "",
-  databaseScope: "",
-  thirdPartyIntegration: "",
-  processStatus: "REQUESTED",
-  picInfra: "",
-  processStartedAt: "",
-  estimatedDoneAt: "",
-  completedAt: "",
-  evidenceLinks: "",
-  technicalNotes: "",
-  finalStatus: "OPEN",
-  auditNotes: "",
-};
-
-export function recordToFormValues(record: {
-  requestChannel: string;
-  platformName: string;
-  domainUrl: string;
-  ownerRequester: string;
-  systemOwnerTeam: string;
-  deletionReason: string | null;
-  deletionBasis: WebDecommissionUpsertInput["deletionBasis"];
-  requestDate: Date | string | null;
-  infraApproved: "YES" | "NO" | null;
-  infraApprovedAt: Date | string | null;
-  infraScope: string | null;
-  databaseScope: string | null;
-  thirdPartyIntegration: "YES" | "NO" | "NA" | null;
-  processStatus: WebDecommissionUpsertInput["processStatus"];
-  picInfra: string | null;
-  processStartedAt: Date | string | null;
-  estimatedDoneAt: Date | string | null;
-  completedAt: Date | string | null;
-  evidenceLinks: string | null;
-  technicalNotes: string | null;
-  finalStatus: WebDecommissionUpsertInput["finalStatus"];
-  auditNotes: string | null;
-}): RecordFormValues {
-  return {
-    requestChannel: record.requestChannel,
-    platformName: record.platformName,
-    domainUrl: record.domainUrl,
-    ownerRequester: record.ownerRequester,
-    systemOwnerTeam: record.systemOwnerTeam,
-    deletionReason: record.deletionReason ?? "",
-    deletionBasis: record.deletionBasis,
-    requestDate: toDateInputValue(record.requestDate),
-    infraApproved: record.infraApproved ?? "",
-    infraApprovedAt: toDateInputValue(record.infraApprovedAt),
-    infraScope: record.infraScope ?? "",
-    databaseScope: record.databaseScope ?? "",
-    thirdPartyIntegration: record.thirdPartyIntegration ?? "",
-    processStatus: record.processStatus,
-    picInfra: record.picInfra ?? "",
-    processStartedAt: toDateInputValue(record.processStartedAt),
-    estimatedDoneAt: toDateInputValue(record.estimatedDoneAt),
-    completedAt: toDateInputValue(record.completedAt),
-    evidenceLinks: record.evidenceLinks ?? "",
-    technicalNotes: record.technicalNotes ?? "",
-    finalStatus: record.finalStatus,
-    auditNotes: record.auditNotes ?? "",
-  };
-}
+export type EvidenceRow = WebDecommissionEvidenceRow;
+export type RecordFormValues = WebDecommissionFormValues;
+export const EMPTY_FORM = EMPTY_WEB_DECOMMISSION_FORM;
 
 function toPayload(values: RecordFormValues): WebDecommissionUpsertInput {
   return {

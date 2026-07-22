@@ -119,8 +119,126 @@ export function formatDateDisplay(date: Date | string | null | undefined) {
 
 export function toDateInputValue(date: Date | string | null | undefined) {
   if (!date) return "";
-  if (typeof date === "string") return date.slice(0, 10);
+  if (typeof date === "string") {
+    const trimmed = date.trim();
+    if (!trimmed) return "";
+    // Already YYYY-MM-DD or ISO
+    if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) return trimmed.slice(0, 10);
+    const parsed = new Date(trimmed);
+    if (Number.isNaN(parsed.getTime())) return "";
+    return parsed.toISOString().slice(0, 10);
+  }
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
   return date.toISOString().slice(0, 10);
+}
+
+export type WebDecommissionFormValues = {
+  requestChannel: string;
+  platformName: string;
+  domainUrl: string;
+  ownerRequester: string;
+  systemOwnerTeam: string;
+  deletionReason: string;
+  deletionBasis: WebDecommissionUpsertInput["deletionBasis"];
+  requestDate: string;
+  infraApproved: "" | "YES" | "NO";
+  infraApprovedAt: string;
+  infraScope: string;
+  databaseScope: string;
+  thirdPartyIntegration: "" | "YES" | "NO" | "NA";
+  processStatus: WebDecommissionUpsertInput["processStatus"];
+  picInfra: string;
+  processStartedAt: string;
+  estimatedDoneAt: string;
+  completedAt: string;
+  evidenceLinks: string;
+  technicalNotes: string;
+  finalStatus: WebDecommissionUpsertInput["finalStatus"];
+  auditNotes: string;
+};
+
+export const EMPTY_WEB_DECOMMISSION_FORM: WebDecommissionFormValues = {
+  requestChannel: "",
+  platformName: "",
+  domainUrl: "",
+  ownerRequester: "",
+  systemOwnerTeam: "",
+  deletionReason: "",
+  deletionBasis: "BUSINESS_REQUEST",
+  requestDate: "",
+  infraApproved: "",
+  infraApprovedAt: "",
+  infraScope: "",
+  databaseScope: "",
+  thirdPartyIntegration: "",
+  processStatus: "REQUESTED",
+  picInfra: "",
+  processStartedAt: "",
+  estimatedDoneAt: "",
+  completedAt: "",
+  evidenceLinks: "",
+  technicalNotes: "",
+  finalStatus: "OPEN",
+  auditNotes: "",
+};
+
+export type WebDecommissionEvidenceRow = {
+  id: string;
+  imageName: string;
+  imageMime: string;
+  imageSize: number;
+  sortOrder: number;
+};
+
+/** Serialize Prisma record → plain form values for Client Component props. */
+export function recordToFormValues(record: {
+  requestChannel: string;
+  platformName: string;
+  domainUrl: string;
+  ownerRequester: string;
+  systemOwnerTeam: string;
+  deletionReason: string | null;
+  deletionBasis: WebDecommissionUpsertInput["deletionBasis"];
+  requestDate: Date | string | null;
+  infraApproved: "YES" | "NO" | null;
+  infraApprovedAt: Date | string | null;
+  infraScope: string | null;
+  databaseScope: string | null;
+  thirdPartyIntegration: "YES" | "NO" | "NA" | null;
+  processStatus: WebDecommissionUpsertInput["processStatus"];
+  picInfra: string | null;
+  processStartedAt: Date | string | null;
+  estimatedDoneAt: Date | string | null;
+  completedAt: Date | string | null;
+  evidenceLinks: string | null;
+  technicalNotes: string | null;
+  finalStatus: WebDecommissionUpsertInput["finalStatus"];
+  auditNotes: string | null;
+}): WebDecommissionFormValues {
+  return {
+    requestChannel: record.requestChannel ?? "",
+    platformName: record.platformName ?? "",
+    domainUrl: record.domainUrl ?? "",
+    ownerRequester: record.ownerRequester ?? "",
+    systemOwnerTeam: record.systemOwnerTeam ?? "",
+    deletionReason: record.deletionReason ?? "",
+    deletionBasis: record.deletionBasis ?? "BUSINESS_REQUEST",
+    requestDate: toDateInputValue(record.requestDate),
+    infraApproved: record.infraApproved ?? "",
+    infraApprovedAt: toDateInputValue(record.infraApprovedAt),
+    infraScope: record.infraScope ?? "",
+    databaseScope: record.databaseScope ?? "",
+    thirdPartyIntegration: record.thirdPartyIntegration ?? "",
+    processStatus: record.processStatus ?? "REQUESTED",
+    picInfra: record.picInfra ?? "",
+    processStartedAt: toDateInputValue(record.processStartedAt),
+    estimatedDoneAt: toDateInputValue(record.estimatedDoneAt),
+    completedAt: toDateInputValue(record.completedAt),
+    evidenceLinks: record.evidenceLinks ?? "",
+    technicalNotes: record.technicalNotes ?? "",
+    finalStatus: record.finalStatus ?? "OPEN",
+    auditNotes: record.auditNotes ?? "",
+  };
 }
 
 /** Map validated payload ke data Prisma (Date fields). */

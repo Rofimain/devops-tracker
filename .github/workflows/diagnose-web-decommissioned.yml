@@ -1,0 +1,31 @@
+name: Diagnose Web Decommissioned
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Diagnose via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 2222
+          command_timeout: 5m
+          script: |
+            set -e
+            cd /opt/devops-tracker
+            DB_PASS=$(grep '^DB_PASSWORD' .env | cut -d= -f2 | tr -d '"' | tr -d "'")
+            echo "=== Tables ==="
+            docker exec devops_db psql -U devops_user -d devops_tracker -c '\dt "WebDecommission*"' || true
+            echo "=== Sample ids ==="
+            docker exec devops_db psql -U devops_user -d devops_tracker -c 'SELECT id, "platformName" FROM "WebDecommissionRecord" LIMIT 5;' || true
+            ID=$(docker exec devops_db psql -U devops_user -d devops_tracker -tAc 'SELECT id FROM "WebDecommissionRecord" LIMIT 1;' | tr -d '[:space:]')
+            echo "Using ID=$ID"
+            echo "=== Curl detail (no auth, expect 307/401/200) ==="
+            docker exec devops_app wget -S -O- "http://127.0.0.1:3000/audit/web-decommissioned/${ID}" 2>&1 | head -80 || true
+            echo "=== App logs ==="
+            docker compose logs app --tail=80
